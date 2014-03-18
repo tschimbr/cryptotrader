@@ -7,7 +7,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
-import ch.eonum.pipeline.core.Features;
 import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.util.Log;
@@ -43,14 +42,15 @@ public class CryptsyMarketDataReader {
 		});
 		
 		Map<String, Double> prevPoint = null;
-		for(File file : files){
+		for (File file : files) {
 			Map<String, Double> point = extractFeatures(file);
-			if(point != null)
+			if (point != null){
 				seq.addTimePoint(point);
-			else if(prevPoint != null)
+				prevPoint = new HashMap<String, Double>(point);
+			} else {
 				seq.addTimePoint(prevPoint);
-			
-			prevPoint = point;
+				prevPoint = new HashMap<String, Double>(prevPoint);
+			}
 		}
 
 		return seq;
@@ -66,26 +66,25 @@ public class CryptsyMarketDataReader {
 	private static Map<String, Double> extractFeatures(File file) throws IOException {
 		Map<String, Double> point = new HashMap<String, Double>();
 		Map<String, Object> json = JSON.readJSON(file);
-		
+
 		int success = (Integer) json.get("success");
-		if(success != 1){
+		if (success != 1) {
 			Log.warn("Unsuccessfull: " + file.getName());
 			return null;
 		}
-		
 		Map<String, Object> res = (Map<String, Object>) json.get("return");
-		if(res == null){
+		if (res == null) {
 			Log.warn("no result entry: " + file.getName());
 			return null;
 		}
 		Map<String, Object> markets = (Map<String, Object>) res.get("markets");
-		if(markets == null){
+		if (markets == null) {
 			Log.warn("no market entry: " + file.getName());
 			return null;
 		}
 		Map<String, Object> market = (Map<String, Object>) markets.get(markets.keySet().iterator().next());
-		point .put("price", Double.parseDouble((String) market.get("lasttradeprice")));
-		point .put("volume", Double.parseDouble((String) market.get("volume")));
+		point.put("price", Double.parseDouble((String) market.get("lasttradeprice")));
+		point.put("volume", Double.parseDouble((String) market.get("volume")));
 		
 		return point;
 	}
@@ -102,10 +101,6 @@ public class CryptsyMarketDataReader {
 		SparseSequence s = CryptsyMarketDataReader.readSequence(dataset);
 		SequenceDataSet<SparseSequence> data = new SequenceDataSet<SparseSequence>();
 		data.add(s);
-		Features targetFeatures = new Features();
-		targetFeatures.addFeature("price");
-		targetFeatures.recalculateIndex();
-		data.setTimeLag(timeLag, targetFeatures );
 		
 		return data;
 	}

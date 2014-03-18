@@ -1,7 +1,10 @@
 package ch.eonum.cryptotrader;
 
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.text.ParseException;
 
 import ch.eonum.pipeline.classification.lstm.LSTM;
@@ -43,14 +46,22 @@ public class LSTMTraining {
 		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
 		minmax.setInputDataSet(dataTraining);
 		minmax.extract();
+		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
 		minmax.setInputDataSet(dataValidation);
 		minmax.extract();
+		
+		Features targetFeatures = new Features();
+		targetFeatures.addFeature("price");
+		targetFeatures.recalculateIndex();
+		dataTraining.setTimeLag(12, targetFeatures);
+		dataValidation.setTimeLag(12, targetFeatures);
 	
 //		dataTraining.addAll(dataValidation);
 				
 		Evaluator<SparseSequence> rmse = new RMSESequence<SparseSequence>();
 		
 		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
+//		lstm.enableTargetNorming();
 		lstm.setForgetGateUse(false);
 		lstm.setInputGateUse(true);
 		lstm.setOutputGateUse(true);
@@ -61,12 +72,13 @@ public class LSTMTraining {
 		
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 1.0);
-		lstm.putParameter("maxEpochsAfterMax", 50);
+		lstm.putParameter("maxEpochsAfterMax", 200);
 		lstm.putParameter("maxEpochs", 1000);
-		lstm.putParameter("numLSTM", 9.0);
+		lstm.putParameter("numLSTM", 10.0);
 		lstm.putParameter("memoryCellBlockSize", 2.0);
 		lstm.putParameter("numHidden", 0.0);
-		lstm.putParameter("learningRate", 0.003125);
+		lstm.putParameter("learningRate", 0.000625);
+		lstm.putParameter("momentum", 0.8);
 		
 
 		lstm.setTestSet(dataValidation);
@@ -78,7 +90,27 @@ public class LSTMTraining {
 		
 		lstmSystem.evaluate(true, "nn-all");
 		System.out.println("Optimum: " + rmse.evaluate(dataValidation));
+		
+		/** visualize. print result. */
+		lstm.setTestSet(dataTraining);
+		lstm.test();
+		printPredicitons(dataValidation.get(0), "predictions.csv");
+		printPredicitons(dataTraining.get(0), "predictionsTraining.csv");
 
+	}
+
+	/**
+	 * @param s
+	 * @param fileName 
+	 * @throws FileNotFoundException
+	 */
+	public static void printPredicitons(SparseSequence s, String fileName)
+			throws FileNotFoundException {
+		PrintWriter pw = new PrintWriter(new File(resultsFolder + fileName));
+		for(int t = 0; t < s.getSequenceLength(); t++){
+			pw.println(s.get(t, "price") + ";" + s.groundTruthAt(t, 0) + ";" + s.resultAt(t, 0));
+		}
+		pw.close();
 	}
 		
 }

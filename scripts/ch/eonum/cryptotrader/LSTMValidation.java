@@ -49,8 +49,16 @@ public class LSTMValidation {
 		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
 		minmax.setInputDataSet(dataTraining);
 		minmax.extract();
+		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
 		minmax.setInputDataSet(dataValidation);
 		minmax.extract();
+		
+		Features targetFeatures = new Features();
+		targetFeatures.addFeature("price");
+		targetFeatures.recalculateIndex();
+		dataTraining.setTimeLag(12, targetFeatures);
+		System.out.println(dataTraining);
+		dataValidation.setTimeLag(12, targetFeatures);
 	
 //		dataTraining.addAll(dataValidation);
 				
@@ -67,8 +75,8 @@ public class LSTMValidation {
 		
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 1.0);
-		lstm.putParameter("maxEpochsAfterMax", 50);
-		lstm.putParameter("maxEpochs", 500);
+		lstm.putParameter("maxEpochsAfterMax", 200);
+		lstm.putParameter("maxEpochs", 1000);
 		lstm.putParameter("numLSTM", 9.0);
 		lstm.putParameter("memoryCellBlockSize", 2.0);
 		lstm.putParameter("numHidden", 0.0);
