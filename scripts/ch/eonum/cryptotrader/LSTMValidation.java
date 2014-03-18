@@ -3,22 +3,28 @@ package ch.eonum.cryptotrader;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import ch.eonum.pipeline.classification.lstm.LSTM;
 import ch.eonum.pipeline.core.DataSet;
 import ch.eonum.pipeline.core.Features;
+import ch.eonum.pipeline.core.Parameters;
 import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.evaluation.Evaluator;
 import ch.eonum.pipeline.evaluation.RMSESequence;
 import ch.eonum.pipeline.transformation.MinMaxNormalizerSequence;
 import ch.eonum.pipeline.util.FileUtil;
+import ch.eonum.pipeline.util.Log;
+import ch.eonum.pipeline.validation.ParameterValidation;
 import ch.eonum.pipeline.validation.SystemValidator;
 
-public class LSTMTraining {
+public class LSTMValidation {
 	public static final String dataset = "data/DOGE_BTC/";
 	public static final String validationdataset = "data/DOGE_BTC_validation/";
-	public static final String resultsFolder = "data/lstm/";
+	public static final String resultsFolder = "data/lstm-validation/";
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough
@@ -62,7 +68,7 @@ public class LSTMTraining {
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 1.0);
 		lstm.putParameter("maxEpochsAfterMax", 50);
-		lstm.putParameter("maxEpochs", 1000);
+		lstm.putParameter("maxEpochs", 500);
 		lstm.putParameter("numLSTM", 9.0);
 		lstm.putParameter("memoryCellBlockSize", 2.0);
 		lstm.putParameter("numHidden", 0.0);
@@ -74,10 +80,29 @@ public class LSTMTraining {
 		SystemValidator<SparseSequence> lstmSystem = new SystemValidator<SparseSequence>(lstm, rmse);
 		lstmSystem.setBaseDir(resultsFolder);
 		
+		List<ParameterValidation> paramsGradientAscent = new ArrayList<ParameterValidation>();
 		
+				
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "numLSTM", 4.0, 12.0, 1.0,
+				20.0, 2.0, 1.0, false));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "momentum", 0.0, 0.9, 0.0,
+				0.99, 0.0, 0.1, false));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "batchSize", 1.0, 100.0, 1.0,
+				200.0, 1.0, 20.0, false));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "learningRate", -14, -2, -8,
+				0.0, 0.01, 1.0, true));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "memoryCellBlockSize", 1.0, 8.0, 1.0,
+				20.0, 1.0, 1.0, false));
 		
-		lstmSystem.evaluate(true, "nn-all");
-		System.out.println("Optimum: " + rmse.evaluate(dataValidation));
+
+		Map<ParameterValidation, Double> params = lstmSystem.gradientAscent(paramsGradientAscent, 5, resultsFolder + "parameter_validation/");
+		Log.puts("Optimal Parameters: " + params);
+		ParameterValidation.updateParameters(params);
 
 	}
 		
