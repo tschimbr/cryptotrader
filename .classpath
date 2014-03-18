@@ -5,5 +5,11 @@
 	<classpathentry kind="src" path="scripts"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/pipeline"/>
+	<classpathentry kind="lib" path="lib/jackson-core-lgpl-1.9.0.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-jaxrs-1.9.0.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-mapper-lgpl-1.9.0.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-smile-1.9.0.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-xc-1.9.0.jar"/>
+	<classpathentry kind="lib" path="lib/junit-4.8.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

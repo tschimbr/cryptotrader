@@ -43,6 +43,8 @@ public class LSTMTraining {
 		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
 		minmax.setInputDataSet(dataTraining);
 		minmax.extract();
+		minmax.setInputDataSet(dataValidation);
+		minmax.extract();
 	
 //		dataTraining.addAll(dataValidation);
 				
@@ -58,13 +60,13 @@ public class LSTMTraining {
 	
 		
 		lstm.putParameter("numNets", 1.0);
-		lstm.putParameter("numNetsTotal", 5.0);
+		lstm.putParameter("numNetsTotal", 1.0);
 		lstm.putParameter("maxEpochsAfterMax", 50);
-		lstm.putParameter("maxEpochs", 150);
+		lstm.putParameter("maxEpochs", 1500);
 		lstm.putParameter("numLSTM", 9.0);
 		lstm.putParameter("memoryCellBlockSize", 2.0);
 		lstm.putParameter("numHidden", 0.0);
-		lstm.putParameter("learningRate", 0.03125);
+		lstm.putParameter("learningRate", 0.003125);
 		
 
 		lstm.setTestSet(dataValidation);
