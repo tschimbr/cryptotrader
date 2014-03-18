@@ -1,0 +1,2 @@
+# CryptoTrader
+An autonomous trading bot for crypto currencies using recurrent neural networks.
