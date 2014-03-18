@@ -43,19 +43,19 @@ public class LSTMTraining {
 		
 		dims.writeToFile(resultsFolder + "features.txt");
 		
-		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
-		minmax.setInputDataSet(dataTraining);
-		minmax.extract();
-		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
-		minmax.setInputDataSet(dataValidation);
-		minmax.extract();
-		
-		Features targetFeatures = new Features();
-		targetFeatures.addFeature("price");
-		targetFeatures.recalculateIndex();
-		dataTraining.setTimeLag(12, targetFeatures);
-		dataValidation.setTimeLag(12, targetFeatures);
-	
+//		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
+//		minmax.setInputDataSet(dataTraining);
+//		minmax.extract();
+////		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
+//		minmax.setInputDataSet(dataValidation);
+//		minmax.extract();
+//		
+//		Features targetFeatures = new Features();
+//		targetFeatures.addFeature("price");
+//		targetFeatures.recalculateIndex();
+//		dataTraining.setTimeLag(12, targetFeatures);
+//		dataValidation.setTimeLag(12, targetFeatures);
+//	
 //		dataTraining.addAll(dataValidation);
 				
 		Evaluator<SparseSequence> rmse = new RMSESequence<SparseSequence>();

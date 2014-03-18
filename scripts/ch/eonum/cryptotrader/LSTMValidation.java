@@ -49,7 +49,7 @@ public class LSTMValidation {
 		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
 		minmax.setInputDataSet(dataTraining);
 		minmax.extract();
-		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
+//		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
 		minmax.setInputDataSet(dataValidation);
 		minmax.extract();
 		

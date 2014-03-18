@@ -2,9 +2,11 @@ package ch.eonum.cryptotrader;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import ch.eonum.pipeline.core.SequenceDataSet;
@@ -23,15 +25,19 @@ import ch.eonum.pipeline.util.json.JSON;
  * 
  */
 public class CryptsyMarketDataReader {
+	
+	public static final double floatingAverageFactor = 0.3;
 
 	/**
 	 * Read the market data sequence from folder.
 	 * @param folder
+	 * @param timeLag 
 	 * @return
 	 * @throws IOException 
 	 */
-	public static SparseSequence readSequence(String folder) throws IOException {
+	public static SparseSequence readSequence(String folder, int timeLag) throws IOException {
 		SparseSequence seq = new SparseSequence("", "", new HashMap<String, Double>());
+		seq.initGroundTruthSequence();
 		File directory = new File(folder);
 		File[] files = directory .listFiles();
 
@@ -42,15 +48,42 @@ public class CryptsyMarketDataReader {
 		});
 		
 		Map<String, Double> prevPoint = null;
-		for (File file : files) {
+		Map<String, Double> floatingAverage = extractFeatures(files[0]);
+		List<Map<String, Double>> previousPoints = new ArrayList<Map<String, Double>>();
+
+		for (int n = 0; n < files.length; n++) {
+			File file = files[n];
 			Map<String, Double> point = extractFeatures(file);
+			
 			if (point != null){
-				seq.addTimePoint(point);
-				prevPoint = new HashMap<String, Double>(point);
+				prevPoint = new HashMap<String, Double>(point);		
 			} else {
-				seq.addTimePoint(prevPoint);
+				point = prevPoint;
 				prevPoint = new HashMap<String, Double>(prevPoint);
 			}
+			
+			
+			Map<String, Double> derivatives = new HashMap<String, Double>();
+			for(String f : floatingAverage.keySet()){
+				derivatives.put(f, (point.get(f) - floatingAverage.get(f))
+						/ floatingAverage.get(f));
+				floatingAverage.put(f, (1 - floatingAverageFactor)
+						* floatingAverage.get(f) + floatingAverageFactor
+						* point.get(f));
+			}
+			seq.addTimePoint(derivatives);
+			
+			List<Double> gt = new ArrayList<Double>();
+			gt.add(Double.NaN);
+			seq.addGroundTruth(gt);
+			
+			if(n > timeLag){
+				double oldPrice = previousPoints.get(previousPoints.size() - timeLag).get("price");
+				seq.addGroundTruth(n - timeLag - 1, 0, 20 * (point.get("price") - oldPrice)
+						/ oldPrice);
+			}
+			
+			previousPoints.add(point);
 		}
 
 		return seq;
@@ -98,7 +131,7 @@ public class CryptsyMarketDataReader {
 	 */
 	public static SequenceDataSet<SparseSequence> readDataSet(String dataset,
 			int timeLag) throws IOException {
-		SparseSequence s = CryptsyMarketDataReader.readSequence(dataset);
+		SparseSequence s = CryptsyMarketDataReader.readSequence(dataset, timeLag);
 		SequenceDataSet<SparseSequence> data = new SequenceDataSet<SparseSequence>();
 		data.add(s);
 		
