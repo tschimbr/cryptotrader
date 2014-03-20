@@ -19,8 +19,8 @@ import ch.eonum.pipeline.util.FileUtil;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMTraining {
-	public static final String dataset = "data/DOGE_BTC/";
-	public static final String validationdataset = "data/DOGE_BTC_validation/";
+	public static final String dataset = "data/LTC_BTC/";
+	public static final String validationdataset = "data/LTC_BTC_validation/";
 	public static final String resultsFolder = "data/lstm/";
 
 	/**
@@ -38,17 +38,18 @@ public class LSTMTraining {
 		SequenceDataSet<SparseSequence> dataValidation = CryptsyMarketDataReader.readDataSet(validationdataset, 12);
 				
 		@SuppressWarnings("unchecked")
-		Features dims = Features.createFromDataSets(new DataSet[] {
+		Features features = Features.createFromDataSets(new DataSet[] {
 				dataTraining });
 		
-		dims.writeToFile(resultsFolder + "features.txt");
+		features.writeToFile(resultsFolder + "features.txt");
+//		dataTraining.addAll(dataValidation);
 		
-//		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
-//		minmax.setInputDataSet(dataTraining);
-//		minmax.extract();
-////		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
-//		minmax.setInputDataSet(dataValidation);
-//		minmax.extract();
+		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, features);
+		minmax.setInputDataSet(dataTraining);
+		minmax.extract();
+//		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
+		minmax.setInputDataSet(dataValidation);
+		minmax.extract();
 //		
 //		Features targetFeatures = new Features();
 //		targetFeatures.addFeature("price");
@@ -56,29 +57,28 @@ public class LSTMTraining {
 //		dataTraining.setTimeLag(12, targetFeatures);
 //		dataValidation.setTimeLag(12, targetFeatures);
 //	
-//		dataTraining.addAll(dataValidation);
+		
 				
 		Evaluator<SparseSequence> rmse = new RMSESequence<SparseSequence>();
 		
 		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
-//		lstm.enableTargetNorming();
 		lstm.setForgetGateUse(false);
 		lstm.setInputGateUse(true);
 		lstm.setOutputGateUse(true);
-		lstm.setFeatures(dims);
+		lstm.setFeatures(features);
 		lstm.setBaseDir(resultsFolder + "lstm/");
 		FileUtil.mkdir(resultsFolder + "lstm/");
 	
 		
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 1.0);
-		lstm.putParameter("maxEpochsAfterMax", 200);
+		lstm.putParameter("maxEpochsAfterMax", 600);
 		lstm.putParameter("maxEpochs", 1000);
-		lstm.putParameter("numLSTM", 10.0);
-		lstm.putParameter("memoryCellBlockSize", 2.0);
+		lstm.putParameter("numLSTM", 4.0);
+		lstm.putParameter("memoryCellBlockSize", 7.0);
 		lstm.putParameter("numHidden", 0.0);
-		lstm.putParameter("learningRate", 0.000625);
-		lstm.putParameter("momentum", 0.8);
+		lstm.putParameter("learningRate", 0.0078);
+		lstm.putParameter("momentum", 0.3);
 		
 
 		lstm.setTestSet(dataValidation);
@@ -89,14 +89,47 @@ public class LSTMTraining {
 		
 		
 		lstmSystem.evaluate(true, "nn-all");
+		lstm.setTestSet(dataValidation);
+		lstm.test();
 		System.out.println("Optimum: " + rmse.evaluate(dataValidation));
+		System.out.println("Base line: " + printBaseline(dataValidation, rmse));
 		
 		/** visualize. print result. */
+		lstm.setTestSet(dataValidation);
+		lstm.test();
 		lstm.setTestSet(dataTraining);
 		lstm.test();
-		printPredicitons(dataValidation.get(0), "predictions.csv");
-		printPredicitons(dataTraining.get(0), "predictionsTraining.csv");
+		printPredicitons(dataValidation.get(0), "predictions.csv", features);
+		printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
 
+	}
+
+	private static double printBaseline(
+			SequenceDataSet<SparseSequence> data,
+			Evaluator<SparseSequence> rmse) {
+		double avgGT = 0;
+		int n = 0;
+		for(SparseSequence s : data){
+			for(int t = 0; t < s.getGroundTruthLength(); t++){
+				if(!Double.isNaN(s.groundTruthAt(t, 0))){
+					avgGT += s.groundTruthAt(t, 0);
+					n++;
+				}
+			}
+		}
+		avgGT /= n;
+		System.out.println("Average ground truth: " + avgGT);
+		
+
+		for(SparseSequence s : data){
+			for(int t = 0; t < s.getGroundTruthLength(); t++){
+				if(!Double.isNaN(s.groundTruthAt(t, 0))){
+					s.addSequenceResult(t, 0, avgGT);
+				}
+			}
+		}
+		
+		return rmse.evaluate(data);
 	}
 
 	/**
@@ -104,11 +137,18 @@ public class LSTMTraining {
 	 * @param fileName 
 	 * @throws FileNotFoundException
 	 */
-	public static void printPredicitons(SparseSequence s, String fileName)
+	public static void printPredicitons(SparseSequence s, String fileName, Features features)
 			throws FileNotFoundException {
 		PrintWriter pw = new PrintWriter(new File(resultsFolder + fileName));
+		for(int f = 0; f < features.size(); f++)
+			pw.print(features.getFeatureByIndex(f) + ";");
+		pw.println("groundTruth;prediction");
+
 		for(int t = 0; t < s.getSequenceLength(); t++){
-			pw.println(s.get(t, "price") + ";" + s.groundTruthAt(t, 0) + ";" + s.resultAt(t, 0));
+			for(int f = 0; f < features.size(); f++)
+				pw.print(s.get(t, features.getFeatureByIndex(f)) + ";");
+			pw.print(s.groundTruthAt(t, 0) + ";" + s.resultAt(t, 0));
+			pw.println();
 		}
 		pw.close();
 	}

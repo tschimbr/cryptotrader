@@ -46,19 +46,19 @@ public class LSTMValidation {
 		
 		dims.writeToFile(resultsFolder + "features.txt");
 		
-		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
-		minmax.setInputDataSet(dataTraining);
-		minmax.extract();
-//		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
-		minmax.setInputDataSet(dataValidation);
-		minmax.extract();
+//		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
+//		minmax.setInputDataSet(dataTraining);
+//		minmax.extract();
+////		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
+//		minmax.setInputDataSet(dataValidation);
+//		minmax.extract();
 		
-		Features targetFeatures = new Features();
-		targetFeatures.addFeature("price");
-		targetFeatures.recalculateIndex();
-		dataTraining.setTimeLag(12, targetFeatures);
-		System.out.println(dataTraining);
-		dataValidation.setTimeLag(12, targetFeatures);
+//		Features targetFeatures = new Features();
+//		targetFeatures.addFeature("price");
+//		targetFeatures.recalculateIndex();
+//		dataTraining.setTimeLag(12, targetFeatures);
+//		System.out.println(dataTraining);
+//		dataValidation.setTimeLag(12, targetFeatures);
 	
 //		dataTraining.addAll(dataValidation);
 				
@@ -76,14 +76,14 @@ public class LSTMValidation {
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 1.0);
 		lstm.putParameter("maxEpochsAfterMax", 200);
-		lstm.putParameter("maxEpochs", 1000);
+		lstm.putParameter("maxEpochs", 500);
 		lstm.putParameter("numLSTM", 9.0);
 		lstm.putParameter("memoryCellBlockSize", 2.0);
 		lstm.putParameter("numHidden", 0.0);
 		lstm.putParameter("learningRate", 0.003125);
 		
 
-		lstm.setTestSet(dataValidation);
+		lstm.setTestSet(dataTraining);
 		lstm.setTrainingSet(dataTraining);
 		SystemValidator<SparseSequence> lstmSystem = new SystemValidator<SparseSequence>(lstm, rmse);
 		lstmSystem.setBaseDir(resultsFolder);
@@ -97,9 +97,9 @@ public class LSTMValidation {
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "momentum", 0.0, 0.9, 0.0,
 				0.99, 0.0, 0.1, false));
-		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				lstm }, "batchSize", 1.0, 100.0, 1.0,
-				200.0, 1.0, 20.0, false));
+//		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+//				lstm }, "batchSize", 1.0, 100.0, 1.0,
+//				200.0, 1.0, 20.0, false));
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "learningRate", -14, -2, -8,
 				0.0, 0.01, 1.0, true));

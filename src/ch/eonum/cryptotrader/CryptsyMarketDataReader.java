@@ -78,9 +78,14 @@ public class CryptsyMarketDataReader {
 			seq.addGroundTruth(gt);
 			
 			if(n > timeLag){
-				double oldPrice = previousPoints.get(previousPoints.size() - timeLag).get("price");
-				seq.addGroundTruth(n - timeLag - 1, 0, 20 * (point.get("price") - oldPrice)
-						/ oldPrice);
+				double oldPrice = previousPoints.get(previousPoints.size() - timeLag - 1).get("price");
+				double change = (point.get("price") - oldPrice) / oldPrice;
+				change *= 40.0;
+				change += 0.5;	
+//				change = Math.max(0, change);
+//				change = Math.min(1, change);
+				seq.addGroundTruth(n - timeLag - 1, 0, change);
+				derivatives.put("change_time_lag", change);
 			}
 			
 			previousPoints.add(point);
