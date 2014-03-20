@@ -22,8 +22,8 @@ import ch.eonum.pipeline.validation.ParameterValidation;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMValidation {
-	public static final String dataset = "data/DOGE_BTC/";
-	public static final String validationdataset = "data/DOGE_BTC_validation/";
+	public static final String dataset = "data/LTC_BTC/";
+	public static final String validationdataset = "data/LTC_BTC_validation/";
 	public static final String resultsFolder = "data/lstm-validation/";
 
 	/**
@@ -46,12 +46,11 @@ public class LSTMValidation {
 		
 		dims.writeToFile(resultsFolder + "features.txt");
 		
-//		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
-//		minmax.setInputDataSet(dataTraining);
-//		minmax.extract();
-////		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
-//		minmax.setInputDataSet(dataValidation);
-//		minmax.extract();
+		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, dims);
+		minmax.setInputDataSet(dataTraining);
+		minmax.extract();
+		minmax.setInputDataSet(dataValidation);
+		minmax.extract();
 		
 //		Features targetFeatures = new Features();
 //		targetFeatures.addFeature("price");
@@ -83,7 +82,7 @@ public class LSTMValidation {
 		lstm.putParameter("learningRate", 0.003125);
 		
 
-		lstm.setTestSet(dataTraining);
+		lstm.setTestSet(dataValidation);
 		lstm.setTrainingSet(dataTraining);
 		SystemValidator<SparseSequence> lstmSystem = new SystemValidator<SparseSequence>(lstm, rmse);
 		lstmSystem.setBaseDir(resultsFolder);

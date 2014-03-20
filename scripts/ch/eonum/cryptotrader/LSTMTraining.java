@@ -35,7 +35,7 @@ public class LSTMTraining {
 		FileUtil.mkdir(resultsFolder);
 		
 		SequenceDataSet<SparseSequence> dataTraining = CryptsyMarketDataReader.readDataSet(dataset, 12);
-		SequenceDataSet<SparseSequence> dataValidation = CryptsyMarketDataReader.readDataSet(validationdataset, 12);
+		SequenceDataSet<SparseSequence> dataValidation = CryptsyMarketDataReader.readDataSet("data/DOGE_BTC/", 12);
 				
 		@SuppressWarnings("unchecked")
 		Features features = Features.createFromDataSets(new DataSet[] {
@@ -74,11 +74,11 @@ public class LSTMTraining {
 		lstm.putParameter("numNetsTotal", 1.0);
 		lstm.putParameter("maxEpochsAfterMax", 600);
 		lstm.putParameter("maxEpochs", 1000);
-		lstm.putParameter("numLSTM", 4.0);
-		lstm.putParameter("memoryCellBlockSize", 7.0);
+		lstm.putParameter("numLSTM", 6.0);
+		lstm.putParameter("memoryCellBlockSize", 5.0);
 		lstm.putParameter("numHidden", 0.0);
-		lstm.putParameter("learningRate", 0.0078);
-		lstm.putParameter("momentum", 0.3);
+		lstm.putParameter("learningRate", 0.004);
+		lstm.putParameter("momentum", 0.8);
 		
 
 		lstm.setTestSet(dataValidation);
@@ -89,6 +89,10 @@ public class LSTMTraining {
 		
 		
 		lstmSystem.evaluate(true, "nn-all");
+		
+		dataValidation = CryptsyMarketDataReader.readDataSet(validationdataset, 12);
+		minmax.setInputDataSet(dataValidation);
+		minmax.extract();
 		lstm.setTestSet(dataValidation);
 		lstm.test();
 		System.out.println("Optimum: " + rmse.evaluate(dataValidation));

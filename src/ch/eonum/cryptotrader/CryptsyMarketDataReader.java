@@ -27,6 +27,14 @@ import ch.eonum.pipeline.util.json.JSON;
 public class CryptsyMarketDataReader {
 	
 	public static final double floatingAverageFactor = 0.3;
+	public static List<String> derivatedFeatures = new ArrayList<String>();
+	
+	static {
+		derivatedFeatures.add("price");
+		derivatedFeatures.add("volume");
+		derivatedFeatures.add("meanQuantity");
+		derivatedFeatures.add("stdPrice");
+	}
 
 	/**
 	 * Read the market data sequence from folder.
@@ -65,11 +73,15 @@ public class CryptsyMarketDataReader {
 			
 			Map<String, Double> derivatives = new HashMap<String, Double>();
 			for(String f : floatingAverage.keySet()){
-				derivatives.put(f, (point.get(f) - floatingAverage.get(f))
-						/ floatingAverage.get(f));
-				floatingAverage.put(f, (1 - floatingAverageFactor)
-						* floatingAverage.get(f) + floatingAverageFactor
-						* point.get(f));
+				if(derivatedFeatures.contains(f)){
+					derivatives.put(f, (point.get(f) - floatingAverage.get(f))
+							/ floatingAverage.get(f));
+					floatingAverage.put(f, (1 - floatingAverageFactor)
+							* floatingAverage.get(f) + floatingAverageFactor
+							* point.get(f));
+				} else {
+					derivatives.put(f, point.get(f));
+				}
 			}
 			seq.addTimePoint(derivatives);
 			
@@ -121,10 +133,42 @@ public class CryptsyMarketDataReader {
 			return null;
 		}
 		Map<String, Object> market = (Map<String, Object>) markets.get(markets.keySet().iterator().next());
-		point.put("price", Double.parseDouble((String) market.get("lasttradeprice")));
+//		point.put("price", Double.parseDouble((String) market.get("lasttradeprice")));
 		point.put("volume", Double.parseDouble((String) market.get("volume")));
+		point.put("daytime", Double.parseDouble(((String) market.get("lasttradetime")).split(" ")[1].substring(0,2)));
+		
+		List<Object> recentTrades = (List<Object>) market.get("recenttrades");
+		int numTrades = recentTrades.size(); /** currently this is always 50. */
+
+		
+		List<Double> prices = new ArrayList<Double>();
+		List<Double> quantities = new ArrayList<Double>();
+		for(Object t : recentTrades){
+			Map<String, String> trade = (Map<String, String>) t;
+			quantities.add(Double.parseDouble(trade.get("quantity")));
+			prices.add(Double.parseDouble(trade.get("price")));		
+		}
+
+		point.put("meanQuantity",  mean(quantities));
+		double meanPrice = mean(prices);
+		point.put("price", meanPrice);
+		point.put("stdPrice", std(prices, meanPrice));
 		
 		return point;
+	}
+
+	private static Double std(List<Double> values, double mean) {
+		double sum = 0;
+		for(Double d : values)
+			sum  += Math.pow(Math.abs(d - mean), 2);
+		return  Math.sqrt(sum / (values.size() - 1));
+	}
+
+	private static double mean(List<Double> values) {
+		double sum = 0;
+		for(Double d : values)
+			sum  += d;
+		return sum/values.size();
 	}
 
 	/**
