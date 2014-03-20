@@ -35,7 +35,7 @@ public class LSTMTraining {
 		FileUtil.mkdir(resultsFolder);
 		
 		SequenceDataSet<SparseSequence> dataTraining = CryptsyMarketDataReader.readDataSet(dataset, 12);
-		SequenceDataSet<SparseSequence> dataValidation = CryptsyMarketDataReader.readDataSet("data/DOGE_BTC/", 12);
+		SequenceDataSet<SparseSequence> dataValidation = CryptsyMarketDataReader.readDataSet(validationdataset, 12);
 				
 		@SuppressWarnings("unchecked")
 		Features features = Features.createFromDataSets(new DataSet[] {

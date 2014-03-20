@@ -34,6 +34,7 @@ public class CryptsyMarketDataReader {
 		derivatedFeatures.add("volume");
 		derivatedFeatures.add("meanQuantity");
 		derivatedFeatures.add("stdPrice");
+		derivatedFeatures.add("spread");
 	}
 
 	/**
@@ -138,9 +139,6 @@ public class CryptsyMarketDataReader {
 		point.put("daytime", Double.parseDouble(((String) market.get("lasttradetime")).split(" ")[1].substring(0,2)));
 		
 		List<Object> recentTrades = (List<Object>) market.get("recenttrades");
-		int numTrades = recentTrades.size(); /** currently this is always 50. */
-
-		
 		List<Double> prices = new ArrayList<Double>();
 		List<Double> quantities = new ArrayList<Double>();
 		for(Object t : recentTrades){
@@ -153,6 +151,21 @@ public class CryptsyMarketDataReader {
 		double meanPrice = mean(prices);
 		point.put("price", meanPrice);
 		point.put("stdPrice", std(prices, meanPrice));
+		
+		List<Object> sellorders = (List<Object>) market.get("sellorders");
+		List<Object> buyorders = (List<Object>) market.get("buyorders");
+		List<Double> sellPrices = new ArrayList<Double>();
+		List<Double> buyPrices = new ArrayList<Double>();
+		for(Object t : sellorders){
+			Map<String, String> order = (Map<String, String>) t;
+			sellPrices.add(Double.parseDouble(order.get("price")));		
+		}
+		for(Object t : buyorders){
+			Map<String, String> order = (Map<String, String>) t;
+			buyPrices.add(Double.parseDouble(order.get("price")));		
+		}
+		
+		point.put("spread", mean(sellPrices) - mean(buyPrices));
 		
 		return point;
 	}
