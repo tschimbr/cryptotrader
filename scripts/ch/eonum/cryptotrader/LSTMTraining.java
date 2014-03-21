@@ -34,35 +34,29 @@ public class LSTMTraining {
 	public static void main(String[] args) throws IOException, ParseException {
 		FileUtil.mkdir(resultsFolder);
 		
-		CryptsyMarketDataReader reader = new CryptsyMarketDataReader();
-		SequenceDataSet<SparseSequence> dataTraining = reader.readDataSet(dataset);
-		SequenceDataSet<SparseSequence> dataValidation = reader.readDataSet(validationdataset);
+		CryptsyMarketDataReader readerTraining = new CryptsyMarketDataReader(dataset);
+		CryptsyMarketDataReader readerValidation = new CryptsyMarketDataReader(validationdataset);
+		
+		SequenceDataSet<SparseSequence> data = readerTraining.readDataSet(dataset);
 				
 		@SuppressWarnings("unchecked")
 		Features features = Features.createFromDataSets(new DataSet[] {
-				dataTraining });
+				data });
 		
 		features.writeToFile(resultsFolder + "features.txt");
 //		dataTraining.addAll(dataValidation);
 		
-		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, features);
-		minmax.setInputDataSet(dataTraining);
-		minmax.extract();
-//		minmax = new MinMaxNormalizerSequence<SparseSequence>(dataValidation, dims);
-		minmax.setInputDataSet(dataValidation);
-		minmax.extract();
-//		
-//		Features targetFeatures = new Features();
-//		targetFeatures.addFeature("price");
-//		targetFeatures.recalculateIndex();
-//		dataTraining.setTimeLag(12, targetFeatures);
-//		dataValidation.setTimeLag(12, targetFeatures);
-//	
+		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(data, features);
+		minmax.addInputTest(readerValidation);
+		minmax.addInputTraining(readerTraining);
 		
 				
 		Evaluator<SparseSequence> rmse = new RMSESequence<SparseSequence>();
 		
 		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
+		lstm.addInputTest(minmax);
+		lstm.addInputTraining(minmax);
+		
 		lstm.setForgetGateUse(false);
 		lstm.setInputGateUse(true);
 		lstm.setOutputGateUse(true);
@@ -81,24 +75,23 @@ public class LSTMTraining {
 		lstm.putParameter("learningRate", 0.004);
 		lstm.putParameter("momentum", 0.8);
 		
-
-		lstm.setTestSet(dataValidation);
-		lstm.setTrainingSet(dataTraining);
 		SystemValidator<SparseSequence> lstmSystem = new SystemValidator<SparseSequence>(lstm, rmse);
-		lstmSystem.setBaseDir(resultsFolder);
-		
-		
+		lstmSystem.setBaseDir(resultsFolder);		
 		
 		lstmSystem.evaluate(true, "nn-all");
 		
-		dataValidation = reader.readDataSet(validationdataset);
+		
+		SequenceDataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
+		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(validationdataset);
 		minmax.setInputDataSet(dataValidation);
+		minmax.extract();
+		minmax.setInputDataSet(dataTraining);
 		minmax.extract();
 		lstm.setTestSet(dataValidation);
 		lstm.test();
 		System.out.println("Optimum: " + rmse.evaluate(dataValidation));
 		System.out.println("Base line: " + printBaseline(dataValidation, rmse));
-		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse, (int)reader.getDoubleParameter("timeLag")));
+		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse, (int)readerTraining.getDoubleParameter("timeLag")));
 		
 		/** visualize. print result. */
 		lstm.setTestSet(dataValidation);

@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 
 import ch.eonum.pipeline.core.DataPipeline;
-import ch.eonum.pipeline.core.DataSet;
 import ch.eonum.pipeline.core.Parameters;
 import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
@@ -44,7 +43,10 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		derivatedFeatures.add("spread");
 	}
 
-	public CryptsyMarketDataReader() {
+	private String inputFolder;
+
+	public CryptsyMarketDataReader(String inputFolder) {
+		this.inputFolder = inputFolder;
 		this.setSupportedParameters(CryptsyMarketDataReader.PARAMETERS);
 		this.putParameter("floatingAverageFactor", 0.3);
 		this.putParameter("timeLag", 12.0);
@@ -238,29 +240,34 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	}
 
 	@Override
-	public DataSet trainSystem(boolean isResultDataSetNeeded) {
-		// TODO Auto-generated method stub
+	public SequenceDataSet<SparseSequence> trainSystem(boolean isResultDataSetNeeded) {
+		try {
+			return this.readDataSet(inputFolder);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
 		return null;
 	}
 
 	@Override
-	public DataSet testSystem() {
-		// TODO Auto-generated method stub
+	public SequenceDataSet<SparseSequence> testSystem() {
+		try {
+			return this.readDataSet(inputFolder);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
 		return null;
 	}
 
 	@Override
-	public void addInputTraining(DataPipeline input) {
-		// TODO Auto-generated method stub
-		
+	public void addInputTraining(DataPipeline<SparseSequence> input) {
+		Log.error("A DataSetReader can only be at the begining of a pipeline");
 	}
 
 	@Override
-	public void addInputTest(DataPipeline input) {
-		// TODO Auto-generated method stub
-		
+	public void addInputTest(DataPipeline<SparseSequence> input) {
+		Log.error("A DataSetReader can only be at the begining of a pipeline");
 	}
-
-	
-
 }
