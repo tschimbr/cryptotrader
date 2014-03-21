@@ -31,6 +31,7 @@ public class CryptsyMarketDataReader {
 	
 	static {
 		derivatedFeatures.add("price");
+		derivatedFeatures.add("deltaMinMaxPrice");
 		derivatedFeatures.add("volume");
 		derivatedFeatures.add("meanQuantity");
 		derivatedFeatures.add("stdPrice");
@@ -150,6 +151,7 @@ public class CryptsyMarketDataReader {
 		point.put("meanQuantity",  mean(quantities));
 		double meanPrice = mean(prices);
 		point.put("price", meanPrice);
+		point.put("deltaMinMaxPrice", (max(prices) - min(prices))/meanPrice);
 		point.put("stdPrice", std(prices, meanPrice));
 		
 		List<Object> sellorders = (List<Object>) market.get("sellorders");
@@ -168,6 +170,20 @@ public class CryptsyMarketDataReader {
 		point.put("spread", mean(sellPrices) - mean(buyPrices));
 		
 		return point;
+	}
+
+	private static Double min(List<Double> values) {
+		double min = Double.POSITIVE_INFINITY;
+		for(Double d : values)
+			min  = Math.min(min, d);
+		return  min;
+	}
+	
+	private static Double max(List<Double> values) {
+		double max = Double.NEGATIVE_INFINITY;
+		for(Double d : values)
+			max  = Math.max(max, d);
+		return  max;
 	}
 
 	private static Double std(List<Double> values, double mean) {

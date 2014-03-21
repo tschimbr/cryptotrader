@@ -24,7 +24,7 @@ import ch.eonum.pipeline.validation.SystemValidator;
 public class LSTMValidation {
 	public static final String dataset = "data/LTC_BTC/";
 	public static final String validationdataset = "data/LTC_BTC_validation/";
-	public static final String resultsFolder = "data/lstm-validation/";
+	public static final String resultsFolder = "data/lstm-validation-forget/";
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough
@@ -64,7 +64,7 @@ public class LSTMValidation {
 		Evaluator<SparseSequence> rmse = new RMSESequence<SparseSequence>();
 		
 		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
-		lstm.setForgetGateUse(false);
+		lstm.setForgetGateUse(true);
 		lstm.setInputGateUse(true);
 		lstm.setOutputGateUse(true);
 		lstm.setFeatures(dims);
