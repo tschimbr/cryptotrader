@@ -22,7 +22,6 @@ public class LSTMTraining {
 	public static final String dataset = "data/LTC_BTC/";
 	public static final String validationdataset = "data/LTC_BTC_validation/";
 	public static final String resultsFolder = "data/lstm/";
-	private static final int TIME_LAG = 12;
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough
@@ -35,8 +34,9 @@ public class LSTMTraining {
 	public static void main(String[] args) throws IOException, ParseException {
 		FileUtil.mkdir(resultsFolder);
 		
-		SequenceDataSet<SparseSequence> dataTraining = CryptsyMarketDataReader.readDataSet(dataset, TIME_LAG);
-		SequenceDataSet<SparseSequence> dataValidation = CryptsyMarketDataReader.readDataSet(validationdataset, TIME_LAG);
+		CryptsyMarketDataReader reader = new CryptsyMarketDataReader();
+		SequenceDataSet<SparseSequence> dataTraining = reader.readDataSet(dataset);
+		SequenceDataSet<SparseSequence> dataValidation = reader.readDataSet(validationdataset);
 				
 		@SuppressWarnings("unchecked")
 		Features features = Features.createFromDataSets(new DataSet[] {
@@ -91,14 +91,14 @@ public class LSTMTraining {
 		
 		lstmSystem.evaluate(true, "nn-all");
 		
-		dataValidation = CryptsyMarketDataReader.readDataSet(validationdataset, 12);
+		dataValidation = reader.readDataSet(validationdataset);
 		minmax.setInputDataSet(dataValidation);
 		minmax.extract();
 		lstm.setTestSet(dataValidation);
 		lstm.test();
 		System.out.println("Optimum: " + rmse.evaluate(dataValidation));
 		System.out.println("Base line: " + printBaseline(dataValidation, rmse));
-		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse));
+		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse, (int)reader.getDoubleParameter("timeLag")));
 		
 		/** visualize. print result. */
 		lstm.setTestSet(dataValidation);
@@ -112,12 +112,12 @@ public class LSTMTraining {
 
 	private static double printTimeLagBaseline(
 			SequenceDataSet<SparseSequence> data,
-			Evaluator<SparseSequence> rmse) {
+			Evaluator<SparseSequence> rmse, int timeLag) {
 		for(SparseSequence s : data){
 			for(int t = 0; t < s.getGroundTruthLength(); t++){
 				if(!Double.isNaN(s.groundTruthAt(t, 0))){
-					if(t > TIME_LAG)
-						s.addSequenceResult(t, 0, s.groundTruthAt(t - TIME_LAG - 1, 0));
+					if(t > timeLag)
+						s.addSequenceResult(t, 0, s.groundTruthAt(t - timeLag - 1, 0));
 					else
 						s.addSequenceResult(t, 0, s.groundTruthAt(t, 0));
 				}

@@ -9,6 +9,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import ch.eonum.pipeline.core.DataPipeline;
+import ch.eonum.pipeline.core.DataSet;
+import ch.eonum.pipeline.core.Parameters;
 import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.util.Log;
@@ -24,18 +27,28 @@ import ch.eonum.pipeline.util.json.JSON;
  * @author tim
  * 
  */
-public class CryptsyMarketDataReader {
+public class CryptsyMarketDataReader extends Parameters implements DataPipeline<SparseSequence> {
 	
-	public static final double floatingAverageFactor = 0.3;
-	public static List<String> derivatedFeatures = new ArrayList<String>();
+	private static List<String> derivatedFeatures = new ArrayList<String>();
+	private static final Map<String, String> PARAMETERS = new HashMap<String, String>();
 	
 	static {
+		PARAMETERS.put("floatingAverageFactor", "factor by which the floating average is being adapted 0 < x < 1 (default 0.3)");
+		PARAMETERS.put("timeLag", "time lag for the ground truth in 10min units, which is one element in the sequence (default 12.0)");
+		PARAMETERS.put("changeNormFactor", "norm the ground truth by this factor (default 40.0)");
 		derivatedFeatures.add("price");
 		derivatedFeatures.add("deltaMinMaxPrice");
 		derivatedFeatures.add("volume");
 		derivatedFeatures.add("meanQuantity");
 		derivatedFeatures.add("stdPrice");
 		derivatedFeatures.add("spread");
+	}
+
+	public CryptsyMarketDataReader() {
+		this.setSupportedParameters(CryptsyMarketDataReader.PARAMETERS);
+		this.putParameter("floatingAverageFactor", 0.3);
+		this.putParameter("timeLag", 12.0);
+		this.putParameter("changeNormFactor", 40.0);
 	}
 
 	/**
@@ -45,7 +58,11 @@ public class CryptsyMarketDataReader {
 	 * @return
 	 * @throws IOException 
 	 */
-	public static SparseSequence readSequence(String folder, int timeLag) throws IOException {
+	public SparseSequence readSequence(String folder) throws IOException {
+		double floatingAverageFactor = this.getDoubleParameter("floatingAverageFactor");
+		double changeNormFactor = this.getDoubleParameter("changeNormFactor");
+		int timeLag = (int) this.getDoubleParameter("timeLag");
+		
 		SparseSequence seq = new SparseSequence("", "", new HashMap<String, Double>());
 		seq.initGroundTruthSequence();
 		File directory = new File(folder);
@@ -94,7 +111,7 @@ public class CryptsyMarketDataReader {
 			if(n > timeLag){
 				double oldPrice = previousPoints.get(previousPoints.size() - timeLag - 1).get("price");
 				double change = (point.get("price") - oldPrice) / oldPrice;
-				change *= 40.0;
+				change *= changeNormFactor;
 				change += 0.5;	
 				seq.addGroundTruth(n - timeLag - 1, 0, change);
 				derivatives.put("change_time_lag", change);
@@ -212,13 +229,36 @@ public class CryptsyMarketDataReader {
 	 * @return
 	 * @throws IOException 
 	 */
-	public static SequenceDataSet<SparseSequence> readDataSet(String dataset,
-			int timeLag) throws IOException {
-		SparseSequence s = CryptsyMarketDataReader.readSequence(dataset, timeLag);
+	public SequenceDataSet<SparseSequence> readDataSet(String dataset) throws IOException {
+		SparseSequence s = readSequence(dataset);
 		SequenceDataSet<SparseSequence> data = new SequenceDataSet<SparseSequence>();
 		data.add(s);
 		
 		return data;
+	}
+
+	@Override
+	public DataSet trainSystem(boolean isResultDataSetNeeded) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public DataSet testSystem() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void addInputTraining(DataPipeline input) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void addInputTest(DataPipeline input) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	

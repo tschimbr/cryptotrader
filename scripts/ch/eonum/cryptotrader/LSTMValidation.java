@@ -37,8 +37,9 @@ public class LSTMValidation {
 	public static void main(String[] args) throws IOException, ParseException {
 		FileUtil.mkdir(resultsFolder);
 		
-		SequenceDataSet<SparseSequence> dataTraining = CryptsyMarketDataReader.readDataSet(dataset, 12);
-		SequenceDataSet<SparseSequence> dataValidation = CryptsyMarketDataReader.readDataSet(validationdataset, 12);
+		CryptsyMarketDataReader reader = new CryptsyMarketDataReader();
+		SequenceDataSet<SparseSequence> dataTraining = reader.readDataSet(dataset);
+		SequenceDataSet<SparseSequence> dataValidation = reader.readDataSet(validationdataset);
 				
 		@SuppressWarnings("unchecked")
 		Features dims = Features.createFromDataSets(new DataSet[] {
