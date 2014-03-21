@@ -22,6 +22,7 @@ public class LSTMTraining {
 	public static final String dataset = "data/LTC_BTC/";
 	public static final String validationdataset = "data/LTC_BTC_validation/";
 	public static final String resultsFolder = "data/lstm/";
+	private static final int TIME_LAG = 12;
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough
@@ -34,8 +35,8 @@ public class LSTMTraining {
 	public static void main(String[] args) throws IOException, ParseException {
 		FileUtil.mkdir(resultsFolder);
 		
-		SequenceDataSet<SparseSequence> dataTraining = CryptsyMarketDataReader.readDataSet(dataset, 12);
-		SequenceDataSet<SparseSequence> dataValidation = CryptsyMarketDataReader.readDataSet(validationdataset, 12);
+		SequenceDataSet<SparseSequence> dataTraining = CryptsyMarketDataReader.readDataSet(dataset, TIME_LAG);
+		SequenceDataSet<SparseSequence> dataValidation = CryptsyMarketDataReader.readDataSet(validationdataset, TIME_LAG);
 				
 		@SuppressWarnings("unchecked")
 		Features features = Features.createFromDataSets(new DataSet[] {
@@ -97,6 +98,7 @@ public class LSTMTraining {
 		lstm.test();
 		System.out.println("Optimum: " + rmse.evaluate(dataValidation));
 		System.out.println("Base line: " + printBaseline(dataValidation, rmse));
+		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse));
 		
 		/** visualize. print result. */
 		lstm.setTestSet(dataValidation);
@@ -106,6 +108,23 @@ public class LSTMTraining {
 		printPredicitons(dataValidation.get(0), "predictions.csv", features);
 		printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
 
+	}
+
+	private static double printTimeLagBaseline(
+			SequenceDataSet<SparseSequence> data,
+			Evaluator<SparseSequence> rmse) {
+		for(SparseSequence s : data){
+			for(int t = 0; t < s.getGroundTruthLength(); t++){
+				if(!Double.isNaN(s.groundTruthAt(t, 0))){
+					if(t > TIME_LAG)
+						s.addSequenceResult(t, 0, s.groundTruthAt(t - TIME_LAG - 1, 0));
+					else
+						s.addSequenceResult(t, 0, s.groundTruthAt(t, 0));
+				}
+			}
+		}
+		
+		return rmse.evaluate(data);
 	}
 
 	private static double printBaseline(

@@ -96,8 +96,6 @@ public class CryptsyMarketDataReader {
 				double change = (point.get("price") - oldPrice) / oldPrice;
 				change *= 40.0;
 				change += 0.5;	
-//				change = Math.max(0, change);
-//				change = Math.min(1, change);
 				seq.addGroundTruth(n - timeLag - 1, 0, change);
 				derivatives.put("change_time_lag", change);
 			}
@@ -141,17 +139,28 @@ public class CryptsyMarketDataReader {
 		
 		List<Object> recentTrades = (List<Object>) market.get("recenttrades");
 		List<Double> prices = new ArrayList<Double>();
+		double weightedMeanPrice = 0;
+		double sumQuantity = 0;
 		List<Double> quantities = new ArrayList<Double>();
 		for(Object t : recentTrades){
 			Map<String, String> trade = (Map<String, String>) t;
-			quantities.add(Double.parseDouble(trade.get("quantity")));
-			prices.add(Double.parseDouble(trade.get("price")));		
+			Double quantity = Double.parseDouble(trade.get("quantity"));
+			quantities.add(quantity );
+			Double price = Double.parseDouble(trade.get("price"));
+			prices.add(price );	
+			weightedMeanPrice += price * quantity;
+			sumQuantity += quantity;
 		}
-
+		
+	
 		point.put("meanQuantity",  mean(quantities));
 		double meanPrice = mean(prices);
+		weightedMeanPrice /= sumQuantity;
+		point.put("weightedMeanPriceDelta", (weightedMeanPrice - meanPrice));
+
+		
 		point.put("price", meanPrice);
-		point.put("deltaMinMaxPrice", (max(prices) - min(prices))/meanPrice);
+//		point.put("deltaMinMaxPrice", (max(prices) - min(prices))/meanPrice);
 		point.put("stdPrice", std(prices, meanPrice));
 		
 		List<Object> sellorders = (List<Object>) market.get("sellorders");
@@ -168,6 +177,9 @@ public class CryptsyMarketDataReader {
 		}
 		
 		point.put("spread", mean(sellPrices) - mean(buyPrices));
+		
+		point.put("deltaSellOrders", (mean(sellPrices) - meanPrice));
+		point.put("deltaBuyOrders", (mean(buyPrices) - meanPrice));
 		
 		return point;
 	}
