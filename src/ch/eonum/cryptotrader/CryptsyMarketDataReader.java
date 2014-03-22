@@ -19,7 +19,7 @@ import ch.eonum.pipeline.util.json.JSON;
 /**
  * Read cryptsy market data as provided by their API:
  * http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid={MARKET
- * ID}
+ * ID} or http://pubapi.cryptsy.com/api.php?method=marketdatav2
  * 
  * API specification: https://www.cryptsy.com/pages/api
  * 
@@ -44,6 +44,9 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	}
 
 	private String inputFolder;
+	private Map<String, Double> prevPoint;
+	private Map<String, Double> floatingAverage;
+	private List<Map<String, Double>> previousPoints;
 
 	public CryptsyMarketDataReader(String inputFolder) {
 		this.inputFolder = inputFolder;
@@ -76,64 +79,85 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 			}
 		});
 		
-		Map<String, Double> prevPoint = null;
-		Map<String, Double> floatingAverage = extractFeatures(files[0]);
-		List<Map<String, Double>> previousPoints = new ArrayList<Map<String, Double>>();
+		prevPoint = null;
+		floatingAverage = singleMarketFeatureExtractionFromFile(files[0]);
+		previousPoints = new ArrayList<Map<String, Double>>();
 
 		for (int n = 0; n < files.length; n++) {
 			File file = files[n];
-			Map<String, Double> point = extractFeatures(file);
-			
-			if (point != null){
-				prevPoint = new HashMap<String, Double>(point);		
-			} else {
-				point = prevPoint;
-				prevPoint = new HashMap<String, Double>(prevPoint);
-			}
-			
-			
-			Map<String, Double> derivatives = new HashMap<String, Double>();
-			for(String f : floatingAverage.keySet()){
-				if(derivatedFeatures.contains(f)){
-					derivatives.put(f, (point.get(f) - floatingAverage.get(f))
-							/ floatingAverage.get(f));
-					floatingAverage.put(f, (1 - floatingAverageFactor)
-							* floatingAverage.get(f) + floatingAverageFactor
-							* point.get(f));
-				} else {
-					derivatives.put(f, point.get(f));
-				}
-			}
-			seq.addTimePoint(derivatives);
-			
-			List<Double> gt = new ArrayList<Double>();
-			gt.add(Double.NaN);
-			seq.addGroundTruth(gt);
-			
-			if(n > timeLag){
-				double oldPrice = previousPoints.get(previousPoints.size() - timeLag - 1).get("price");
-				double change = (point.get("price") - oldPrice) / oldPrice;
-				change *= changeNormFactor;
-				change += 0.5;	
-				seq.addGroundTruth(n - timeLag - 1, 0, change);
-				derivatives.put("change_time_lag", change);
-			}
-			
-			previousPoints.add(point);
+			addPointToSequenceBySingleMarketFile(floatingAverageFactor, changeNormFactor,
+					timeLag, seq, n, file);
 		}
 
 		return seq;
 	}
 
 	/**
-	 * Read a single Point from file.
+	 * Add a single Point to the sequence. This method can also be used for real
+	 * time updating of a sequence.
+	 * 
+	 * @param floatingAverageFactor
+	 * @param changeNormFactor
+	 * @param timeLag
+	 * @param seq
+	 * @param n
+	 * @param file
+	 * @throws IOException
+	 */
+	public void addPointToSequenceBySingleMarketFile(double floatingAverageFactor,
+			double changeNormFactor, int timeLag, SparseSequence seq, int n,
+			File file) throws IOException {
+		Map<String, Double> point = singleMarketFeatureExtractionFromFile(file);
+		
+		if (point != null){
+			prevPoint = new HashMap<String, Double>(point);		
+		} else {
+			point = prevPoint;
+			prevPoint = new HashMap<String, Double>(prevPoint);
+		}
+		
+		
+		Map<String, Double> derivatives = new HashMap<String, Double>();
+		for(String f : floatingAverage.keySet()){
+			if(derivatedFeatures.contains(f)){
+				derivatives.put(f, (point.get(f) - floatingAverage.get(f))
+						/ floatingAverage.get(f));
+				floatingAverage.put(f, (1 - floatingAverageFactor)
+						* floatingAverage.get(f) + floatingAverageFactor
+						* point.get(f));
+			} else {
+				derivatives.put(f, point.get(f));
+			}
+		}
+		seq.addTimePoint(derivatives);
+		
+		List<Double> gt = new ArrayList<Double>();
+		gt.add(Double.NaN);
+		seq.addGroundTruth(gt);
+		
+		if(n > timeLag){
+			double oldPrice = previousPoints.get(previousPoints.size() - timeLag - 1).get("price");
+			double change = (point.get("price") - oldPrice) / oldPrice;
+			change *= changeNormFactor;
+			change += 0.5;
+			change = Math.min(1.0, change);
+			change = Math.max(0.0, change);
+			seq.addGroundTruth(n - timeLag - 1, 0, change);
+			derivatives.put("change_time_lag", change);
+		}
+		
+		previousPoints.add(point);
+	}
+
+	/**
+	 * Single market files feature extraction
 	 * @param file
 	 * @return
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	private static Map<String, Double> extractFeatures(File file) throws IOException {
-		Map<String, Double> point = new HashMap<String, Double>();
+	private static Map<String, Double> singleMarketFeatureExtractionFromFile(File file) throws IOException {
+		
 		Map<String, Object> json = JSON.readJSON(file);
 
 		int success = (Integer) json.get("success");
@@ -151,7 +175,21 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 			Log.warn("no market entry: " + file.getName());
 			return null;
 		}
+		/** get the first market. */
 		Map<String, Object> market = (Map<String, Object>) markets.get(markets.keySet().iterator().next());
+		
+		return singleMarketFeatureExtractionFromJSON(market);
+	}
+
+	/**
+	 * Single market feature extraction.
+	 * @param markets
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public static Map<String, Double> singleMarketFeatureExtractionFromJSON(
+			Map<String, Object> market) {
+		Map<String, Double> point = new HashMap<String, Double>();
 //		point.put("price", Double.parseDouble((String) market.get("lasttradeprice")));
 		point.put("volume", Double.parseDouble((String) market.get("volume")));
 		point.put("daytime", Double.parseDouble(((String) market.get("lasttradetime")).split(" ")[1].substring(0,2)));
@@ -192,7 +230,6 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		
 		point.put("deltaSellOrders", (mean(sellPrices) - meanPrice));
 		point.put("deltaBuyOrders", (mean(buyPrices) - meanPrice));
-		
 		return point;
 	}
 

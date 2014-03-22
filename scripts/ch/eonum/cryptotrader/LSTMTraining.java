@@ -36,6 +36,9 @@ public class LSTMTraining {
 		
 		CryptsyMarketDataReader readerTraining = new CryptsyMarketDataReader(dataset);
 		CryptsyMarketDataReader readerValidation = new CryptsyMarketDataReader(validationdataset);
+		readerTraining.putParameter("floatingAverageFactor", 0.3);
+		readerValidation.putParameter("floatingAverageFactor", 0.3);
+		
 		
 		SequenceDataSet<SparseSequence> data = readerTraining.readDataSet(dataset);
 				
@@ -82,7 +85,7 @@ public class LSTMTraining {
 		
 		
 		SequenceDataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
-		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(validationdataset);
+		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
 		minmax.setInputDataSet(dataValidation);
 		minmax.extract();
 		minmax.setInputDataSet(dataTraining);
