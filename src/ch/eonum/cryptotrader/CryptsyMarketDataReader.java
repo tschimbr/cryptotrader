@@ -29,6 +29,7 @@ import ch.eonum.pipeline.util.json.JSON;
 public class CryptsyMarketDataReader extends Parameters implements DataPipeline<SparseSequence> {
 	
 	private static List<String> derivatedFeatures = new ArrayList<String>();
+	private static Map<String, Object> markets;
 	private static final Map<String, String> PARAMETERS = new HashMap<String, String>();
 	
 	static {
@@ -44,9 +45,11 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	}
 
 	private String inputFolder;
-	private Map<String, Double> prevPoint;
-	private Map<String, Double> floatingAverage;
-	private List<Map<String, Double>> previousPoints;
+	private Map<SparseSequence, Map<String, Double>> prevPoint;
+	private Map<SparseSequence, Map<String, Double>> floatingAverage;
+	private Map<SparseSequence, List<Map<String, Double>>> previousPoints;
+	private HashMap<String, SparseSequence> marketsByName;
+	private SparseSequence currentSequence;
 
 	public CryptsyMarketDataReader(String inputFolder) {
 		this.inputFolder = inputFolder;
@@ -56,44 +59,10 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		this.putParameter("changeNormFactor", 40.0);
 	}
 
-	/**
-	 * Read the market data sequence from folder.
-	 * @param folder
-	 * @param timeLag 
-	 * @return
-	 * @throws IOException 
-	 */
-	public SparseSequence readSequence(String folder) throws IOException {
-		double floatingAverageFactor = this.getDoubleParameter("floatingAverageFactor");
-		double changeNormFactor = this.getDoubleParameter("changeNormFactor");
-		int timeLag = (int) this.getDoubleParameter("timeLag");
-		
-		SparseSequence seq = new SparseSequence("", "", new HashMap<String, Double>());
-		seq.initGroundTruthSequence();
-		File directory = new File(folder);
-		File[] files = directory .listFiles();
-
-		Arrays.sort(files, new Comparator<File>() {
-			public int compare(File f1, File f2) {
-				return Integer.valueOf(f1.getName().compareTo(f2.getName()));
-			}
-		});
-		
-		prevPoint = null;
-		floatingAverage = singleMarketFeatureExtractionFromFile(files[0]);
-		previousPoints = new ArrayList<Map<String, Double>>();
-
-		for (int n = 0; n < files.length; n++) {
-			File file = files[n];
-			addPointToSequenceBySingleMarketFile(floatingAverageFactor, changeNormFactor,
-					timeLag, seq, n, file);
-		}
-
-		return seq;
-	}
+	
 
 	/**
-	 * Add a single Point to the sequence. This method can also be used for real
+	 * Add a single Point to the current sequence. This method can also be used for real
 	 * time updating of a sequence.
 	 * 
 	 * @param floatingAverageFactor
@@ -104,79 +73,47 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	 * @param file
 	 * @throws IOException
 	 */
-	public void addPointToSequenceBySingleMarketFile(double floatingAverageFactor,
-			double changeNormFactor, int timeLag, SparseSequence seq, int n,
-			File file) throws IOException {
-		Map<String, Double> point = singleMarketFeatureExtractionFromFile(file);
+	public void addPointToSequenceBySingleMarket(double floatingAverageFactor,
+			double changeNormFactor, int timeLag, int n,
+			Map<String, Object> jsonMarket) throws IOException {
+		Map<String, Double> point = this.singleMarketFeatureExtractionFromJSON(jsonMarket);
 		
 		if (point != null){
-			prevPoint = new HashMap<String, Double>(point);		
+			prevPoint.put(currentSequence, new HashMap<String, Double>(point));		
 		} else {
-			point = prevPoint;
-			prevPoint = new HashMap<String, Double>(prevPoint);
+			point = prevPoint.get(currentSequence);
+			prevPoint.put(currentSequence, new HashMap<String, Double>(prevPoint.get(currentSequence)));
 		}
 		
-		
+		Map<String, Double> flAvg = floatingAverage.get(currentSequence);
 		Map<String, Double> derivatives = new HashMap<String, Double>();
-		for(String f : floatingAverage.keySet()){
-			if(derivatedFeatures.contains(f)){
-				derivatives.put(f, (point.get(f) - floatingAverage.get(f))
-						/ floatingAverage.get(f));
-				floatingAverage.put(f, (1 - floatingAverageFactor)
-						* floatingAverage.get(f) + floatingAverageFactor
-						* point.get(f));
+		for (String f : flAvg.keySet()) {
+			if (derivatedFeatures.contains(f)) {
+				derivatives.put(f, (point.get(f) - flAvg.get(f)) / flAvg.get(f));
+				flAvg.put(f, (1 - floatingAverageFactor) * flAvg.get(f)
+						+ floatingAverageFactor * point.get(f));
 			} else {
 				derivatives.put(f, point.get(f));
 			}
 		}
-		seq.addTimePoint(derivatives);
+		this.currentSequence.addTimePoint(derivatives);
 		
 		List<Double> gt = new ArrayList<Double>();
 		gt.add(Double.NaN);
-		seq.addGroundTruth(gt);
+		this.currentSequence.addGroundTruth(gt);
+		
+		List<Map<String, Double>> prevPoints = this.previousPoints.get(this.currentSequence);
 		
 		if(n > timeLag){
-			double oldPrice = previousPoints.get(previousPoints.size() - timeLag - 1).get("price");
+			double oldPrice = prevPoints.get(prevPoints.size() - timeLag - 1).get("price");
 			double change = (point.get("price") - oldPrice) / oldPrice;
 			change *= changeNormFactor;
 			change += 0.5;
-			seq.addGroundTruth(n - timeLag - 1, 0, change);
+			this.currentSequence.addGroundTruth(n - timeLag - 1, 0, change);
 			derivatives.put("change_time_lag", change);
 		}
 		
-		previousPoints.add(point);
-	}
-
-	/**
-	 * Single market files feature extraction
-	 * @param file
-	 * @return
-	 * @throws IOException
-	 */
-	@SuppressWarnings("unchecked")
-	private static Map<String, Double> singleMarketFeatureExtractionFromFile(File file) throws IOException {
-		
-		Map<String, Object> json = JSON.readJSON(file);
-
-		int success = (Integer) json.get("success");
-		if (success != 1) {
-			Log.warn("Unsuccessfull: " + file.getName());
-			return null;
-		}
-		Map<String, Object> res = (Map<String, Object>) json.get("return");
-		if (res == null) {
-			Log.warn("no result entry: " + file.getName());
-			return null;
-		}
-		Map<String, Object> markets = (Map<String, Object>) res.get("markets");
-		if (markets == null) {
-			Log.warn("no market entry: " + file.getName());
-			return null;
-		}
-		/** get the first market. */
-		Map<String, Object> market = (Map<String, Object>) markets.get(markets.keySet().iterator().next());
-		
-		return singleMarketFeatureExtractionFromJSON(market);
+		prevPoints.add(point);
 	}
 
 	/**
@@ -185,7 +122,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public static Map<String, Double> singleMarketFeatureExtractionFromJSON(
+	public Map<String, Double> singleMarketFeatureExtractionFromJSON(
 			Map<String, Object> market) {
 		Map<String, Double> point = new HashMap<String, Double>();
 //		point.put("price", Double.parseDouble((String) market.get("lasttradeprice")));
@@ -266,10 +203,71 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	 * @return
 	 * @throws IOException 
 	 */
-	public SequenceDataSet<SparseSequence> readDataSet(String dataset) throws IOException {
-		SparseSequence s = readSequence(dataset);
+	@SuppressWarnings("unchecked")
+	public SequenceDataSet<SparseSequence> readDataSet(String dataset) throws IOException {	
 		SequenceDataSet<SparseSequence> data = new SequenceDataSet<SparseSequence>();
-		data.add(s);
+		
+		double floatingAverageFactor = this.getDoubleParameter("floatingAverageFactor");
+		double changeNormFactor = this.getDoubleParameter("changeNormFactor");
+		int timeLag = (int) this.getDoubleParameter("timeLag");
+		
+		File directory = new File(dataset);
+		File[] files = directory .listFiles();
+
+		Arrays.sort(files, new Comparator<File>() {
+			public int compare(File f1, File f2) {
+				return Integer.valueOf(f1.getName().compareTo(f2.getName()));
+			}
+		});
+		
+		prevPoint = new HashMap<SparseSequence, Map<String, Double>>();
+		floatingAverage = new HashMap<SparseSequence, Map<String, Double>>();
+		previousPoints = new HashMap<SparseSequence, List<Map<String, Double>>>();
+		 
+		marketsByName = new HashMap<String, SparseSequence>();
+
+		for (int n = 0; n < files.length; n++) {
+			File file = files[n];
+			
+			Map<String, Object> json = JSON.readJSON(file);
+
+			int success = (Integer) json.get("success");
+			if (success != 1) {
+				Log.warn("Unsuccessfull: " + file.getName());
+				return null;
+			}
+			Map<String, Object> res = (Map<String, Object>) json.get("return");
+			if (res == null) {
+				Log.warn("no return entry: " + file.getName());
+				return null;
+			}
+			markets = (Map<String, Object>) res.get("markets");
+			if (markets == null) {
+				Log.warn("no markets entry: " + file.getName());
+				return null;
+			}
+			
+			
+			for(String name : markets.keySet()){
+				Map<String, Object> market = (Map<String, Object>)markets.get(name);
+				if(!this.marketsByName.containsKey(name)){
+					SparseSequence seq = new SparseSequence(name, "", new HashMap<String, Double>());
+					seq.initGroundTruthSequence();
+					prevPoint.put(seq, null);
+					floatingAverage.put(seq, singleMarketFeatureExtractionFromJSON(market));
+					previousPoints.put(seq, new ArrayList<Map<String, Double>>());
+					this.marketsByName.put(name, seq );
+				}
+				
+				this.currentSequence = this.marketsByName.get(name);
+				
+				addPointToSequenceBySingleMarket(floatingAverageFactor, changeNormFactor,
+						timeLag, n, market);
+			}
+		}
+		
+		for(SparseSequence e : this.marketsByName.values())
+			data.add(e);
 		
 		return data;
 	}
