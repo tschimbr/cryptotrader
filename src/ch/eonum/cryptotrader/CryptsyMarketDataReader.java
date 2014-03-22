@@ -140,8 +140,6 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 			double change = (point.get("price") - oldPrice) / oldPrice;
 			change *= changeNormFactor;
 			change += 0.5;
-			change = Math.min(1.0, change);
-			change = Math.max(0.0, change);
 			seq.addGroundTruth(n - timeLag - 1, 0, change);
 			derivatives.put("change_time_lag", change);
 		}

@@ -39,26 +39,28 @@ public class LSTMTraining {
 		readerTraining.putParameter("floatingAverageFactor", 0.3);
 		readerValidation.putParameter("floatingAverageFactor", 0.3);
 		
-		
-		SequenceDataSet<SparseSequence> data = readerTraining.readDataSet(dataset);
-				
+		SequenceDataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
+		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
+						
 		@SuppressWarnings("unchecked")
 		Features features = Features.createFromDataSets(new DataSet[] {
-				data });
+				dataTraining });
 		
 		features.writeToFile(resultsFolder + "features.txt");
 //		dataTraining.addAll(dataValidation);
 		
-		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(data, features);
-		minmax.addInputTest(readerValidation);
-		minmax.addInputTraining(readerTraining);
+		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, features);
+		minmax.setInputDataSet(dataTraining);
+		minmax.extract();
+		minmax.setInputDataSet(dataValidation);
+		minmax.extract();
 		
 				
 		Evaluator<SparseSequence> rmse = new RMSESequence<SparseSequence>();
 		
 		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
-		lstm.addInputTest(minmax);
-		lstm.addInputTraining(minmax);
+		lstm.setTestSet(dataValidation);
+		lstm.setTrainingSet(dataTraining);
 		
 		lstm.setForgetGateUse(false);
 		lstm.setInputGateUse(true);
@@ -66,7 +68,6 @@ public class LSTMTraining {
 		lstm.setFeatures(features);
 		lstm.setBaseDir(resultsFolder + "lstm/");
 		FileUtil.mkdir(resultsFolder + "lstm/");
-	
 		
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 1.0);
@@ -83,22 +84,11 @@ public class LSTMTraining {
 		
 		lstmSystem.evaluate(true, "nn-all");
 		
-		
-		SequenceDataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
-		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
-		minmax.setInputDataSet(dataValidation);
-		minmax.extract();
-		minmax.setInputDataSet(dataTraining);
-		minmax.extract();
-		lstm.setTestSet(dataValidation);
-		lstm.test();
 		System.out.println("Optimum: " + rmse.evaluate(dataValidation));
 		System.out.println("Base line: " + printBaseline(dataValidation, rmse));
 		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse, (int)readerTraining.getDoubleParameter("timeLag")));
 		
 		/** visualize. print result. */
-		lstm.setTestSet(dataValidation);
-		lstm.test();
 		lstm.setTestSet(dataTraining);
 		lstm.test();
 		printPredicitons(dataValidation.get(0), "predictions.csv", features);
