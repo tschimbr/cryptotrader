@@ -1,5 +1,8 @@
 package ch.eonum.cryptotrader;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import ch.eonum.pipeline.core.DataSet;
 import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
@@ -30,6 +33,11 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	public boolean hasNext() {
 		return this.currentIndex < marketData.getSequenceLength();
 	} 
+	
+	@Override
+	public Map<String, Double> next() {
+		return new HashMap<String, Double>(marketData.getTimePoint(currentIndex++));
+	}
 
 	@Override
 	public double evaluate(DataSet<SparseSequence> dataset) {
@@ -46,7 +54,4 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	public void printResultsAndGnuplot(String fileName) {
 		// TODO Auto-generated method stub	
 	}
-
-	
-
 }

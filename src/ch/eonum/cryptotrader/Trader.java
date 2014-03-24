@@ -4,6 +4,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 import ch.eonum.pipeline.core.DataPipeline;
 import ch.eonum.pipeline.core.DataSet;
@@ -29,11 +34,15 @@ public class Trader implements DataPipeline<SparseSequence>  {
 	 * next iteration.
 	 */
 	private boolean close;
+	private List<Double> previousPredictions;
+	private SimpleDateFormat dateFormatter;
 
 	public Trader(PricePredictor pricePredictor, Market market, String logFileName) throws IOException {
 		this.market = market;
 		this.predictor = pricePredictor;
 		this.log = new PrintWriter(new File(logFileName));
+		this.previousPredictions = new ArrayList<Double>();
+		dateFormatter = new SimpleDateFormat("yyyy-MM-dd kk:mm");
 	}
 	
 	/**
@@ -49,8 +58,13 @@ public class Trader implements DataPipeline<SparseSequence>  {
 	 * forever unless stopped using {@link #close()}
 	 */
 	public void startTrading() {
-		// TODO Auto-generated method stub
-		
+		while(market.hasNext() && !close){
+			Map<String, Double> marketData = market.next();
+			double prediction = predictor.nextPrediction(marketData);
+			this.previousPredictions.add(prediction);
+			log.println(dateFormatter.format(new Date()) + " prediction: " + prediction);
+			
+		}
 	}
 	
 	/** pipeline methods. */
