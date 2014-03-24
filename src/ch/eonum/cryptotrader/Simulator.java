@@ -24,6 +24,7 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	private Map<String, Double> balances;
 	private Map<String, Double> prices;
 	private String currencyName;
+	private double initialPortfolioValue;
 
 	public Simulator(CryptsyMarketDataReader dataReader, double initialBalanceX, double initialBalanceBTC) {
 		this.reader = dataReader;
@@ -37,6 +38,7 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 		this.prices = new HashMap<String, Double>();
 		this.prices.put(currencyName, 0.0);
 		this.prices.put("BTC", 1.0);
+		this.initialPortfolioValue = this.getPortfolioValue();
 	}
 	
 	@Override
@@ -70,8 +72,7 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 
 	@Override
 	public double evaluate(DataSet<SparseSequence> dataset) {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.getPortfolioValue() - this.initialPortfolioValue;
 	}
 
 	@Override
