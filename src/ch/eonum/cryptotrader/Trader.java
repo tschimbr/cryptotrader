@@ -31,6 +31,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		PARAMETERS.put("upperThreshold", "Above this threshold we buy (default 0.65)");
 		PARAMETERS.put("lowerThreshold", "Below this threshold we sell (default 0.35)");
 		PARAMETERS.put("numConsecutive", "At least numConsecutive points have to be above/below threshold (default 3)");
+		PARAMETERS.put("minimumTrade", "minimum size of trade in % of portfolio value. (0.01)");
 	}
 
 	/** market forecasting unit. */
@@ -60,6 +61,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		this.putParameter("numConsecutive", 3.0);
 		this.putParameter("upperThreshold", 0.65);
 		this.putParameter("lowerThreshold", 0.35);
+		this.putParameter("minimumTrade", 0.01);
 	}
 	
 	/**
@@ -99,6 +101,8 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 			this.balanceLog.print(btcBalance + ";" + xBalance + ";" + price
 					+ ";" + portFolioValue + ";");
 			
+			double minimum = this.getDoubleParameter("minimumTrade") * portFolioValue;
+			
 			if(time > this.getIntParameter("startAfter")){
 				/** start trading. */
 				/** buy. */
@@ -108,9 +112,11 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
 						isStable = isStable && previousPredictions.get(i) > getDoubleParameter("upperThreshold");
 					if(isStable){
-						double amount = btcBalance * 0.5 * price;
-						this.market.placeBuyOrder(amount, price);
-						this.balanceLog.print("Buy;" + amount + ";" + price);
+						double amount = (btcBalance * 0.5) / price;
+						if(amount * price > minimum){
+							this.market.placeBuyOrder(amount, price);
+							this.balanceLog.print("Buy;" + amount + ";" + price);
+						}
 					}
 				}
 				/** sell. */
@@ -121,12 +127,15 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 						isStable = isStable && previousPredictions.get(i) < getDoubleParameter("lowerThreshold");
 					if(isStable){
 						double amount = xBalance * 0.5;
-						this.market.placeSellOrder(amount, price);
-						this.balanceLog.print("Sell;" + amount + ";" + price);
+						if(amount * price > minimum){
+							this.market.placeSellOrder(amount, price);
+							this.balanceLog.print("Sell;" + amount + ";" + price);
+						}
 					}
 				}
-				this.balanceLog.println();
+				
 			}
+			this.balanceLog.println();
 		}
 	}
 	
