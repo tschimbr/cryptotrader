@@ -50,6 +50,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 	private PrintWriter balanceLog;
 
 	public Trader(PricePredictor pricePredictor, Market market, String logFileName) throws IOException {
+		this.setSupportedParameters(Trader.PARAMETERS);
 		this.market = market;
 		this.predictor = pricePredictor;
 		this.log = new PrintWriter(new File(logFileName));
@@ -79,9 +80,9 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		Map<String, Double> balances = this.market.getBalances();
 		Map<String, Double> prices = this.market.getPrices();
 		for(String currency : balances.keySet()){
-			this.balanceLog.print(currency + " balance;" + currency + " price;");
+			this.balanceLog.print(currency + "Balance;" + currency + "Price;");
 		}
-		this.balanceLog.println("portfolio value;");
+		this.balanceLog.println("portfolioValue;");
 		
 		while(market.hasNext() && !close){
 			Map<String, Double> marketData = market.next();

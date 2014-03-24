@@ -15,8 +15,6 @@ import ch.eonum.pipeline.evaluation.Evaluator;
  */
 public class Simulator implements Evaluator<SparseSequence>, Market  {
 	
-	/** market data reader with simulation data. */
-	private CryptsyMarketDataReader reader;
 	/** simulation data. */
 	private SparseSequence marketData;
 	/** current time in the sequence. */
@@ -27,7 +25,7 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	private double initialPortfolioValue;
 
 	public Simulator(CryptsyMarketDataReader dataReader, double initialBalanceX, double initialBalanceBTC) {
-		this.reader = dataReader;
+		dataReader.doStorePriceData();
 		SequenceDataSet<SparseSequence> data = dataReader.testSystem();
 		this.marketData = data.get(0);
 		this.currentIndex = 0;
@@ -36,7 +34,7 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 		this.balances.put(currencyName , initialBalanceX);
 		this.balances.put("BTC", initialBalanceBTC);
 		this.prices = new HashMap<String, Double>();
-		this.prices.put(currencyName, 0.0);
+		this.prices.put(currencyName, marketData.getTimePoint(0).get("marketPrice"));
 		this.prices.put("BTC", 1.0);
 		this.initialPortfolioValue = this.getPortfolioValue();
 	}
@@ -48,8 +46,9 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	
 	@Override
 	public Map<String, Double> next() {
-		return new HashMap<String, Double>(marketData.getTimePoint(currentIndex++));
-		// #TODO update price
+		Map<String, Double> map = marketData.getTimePoint(currentIndex++);	
+		this.prices.put(currencyName, map.get("marketPrice"));
+		return new HashMap<String, Double>(map);
 	}
 	
 	@Override

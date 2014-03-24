@@ -50,6 +50,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	private Map<SparseSequence, List<Map<String, Double>>> previousPoints;
 	private HashMap<String, SparseSequence> marketsByName;
 	private SparseSequence currentSequence;
+	private boolean storePriceData;
 
 	public CryptsyMarketDataReader(String inputFolder) {
 		this.inputFolder = inputFolder;
@@ -57,6 +58,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		this.putParameter("floatingAverageFactor", 0.3);
 		this.putParameter("timeLag", 12.0);
 		this.putParameter("changeNormFactor", 40.0);
+		this.storePriceData = false;
 	}
 	
 	/**
@@ -184,6 +186,8 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 				derivatives.put(f, point.get(f));
 			}
 		}
+		if(this.storePriceData)
+			derivatives.put("marketPrice", point.get("price"));
 		this.currentSequence.addTimePoint(derivatives);
 		
 		List<Double> gt = new ArrayList<Double>();
@@ -320,5 +324,9 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	@Override
 	public void addInputTest(DataPipeline<SparseSequence> input) {
 		Log.error("A DataSetReader can only be at the begining of a pipeline");
+	}
+
+	public void doStorePriceData() {
+		this.storePriceData = true;
 	}
 }

@@ -96,10 +96,12 @@ public class LSTMTraining {
 		printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
 		
 		PricePredictor pp = new PricePredictor(lstm, minmax);
-		Market simulator = new Simulator(readerValidation, 20, 1);
+		Simulator simulator = new Simulator(readerValidation, 20, 1);
 		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
 		trader.startTrading();
 		trader.close();
+		
+		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
 
 	}
 
