@@ -22,4 +22,22 @@ public interface Market {
 	 */
 	public Map<String, Double> next();
 
+	/**
+	 * Get all balances in this account by currency.
+	 * @return
+	 */
+	public Map<String, Double> getBalances();
+
+	/**
+	 * Get all prices in BitCoin by currency.
+	 * @return
+	 */
+	public Map<String, Double> getPrices();
+
+	/**
+	 * Get portfolio value of this account. 
+	 * @return
+	 */
+	public double getPortfolioValue();
+
 }

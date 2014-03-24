@@ -39,15 +39,14 @@ public class LSTMTraining {
 		readerTraining.putParameter("floatingAverageFactor", 0.3);
 		readerValidation.putParameter("floatingAverageFactor", 0.3);
 		
-		SequenceDataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
+		DataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
 		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
-						
+		
 		@SuppressWarnings("unchecked")
 		Features features = Features.createFromDataSets(new DataSet[] {
 				dataTraining });
 		
 		features.writeToFile(resultsFolder + "features.txt");
-//		dataTraining.addAll(dataValidation);
 		
 		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, features);
 		minmax.setInputDataSet(dataTraining);
@@ -91,11 +90,13 @@ public class LSTMTraining {
 		/** visualize. print result. */
 		lstm.setTestSet(dataTraining);
 		lstm.test();
+		lstm.setTestSet(dataValidation);
+		lstm.test();
 		printPredicitons(dataValidation.get(0), "predictions.csv", features);
 		printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
 		
 		PricePredictor pp = new PricePredictor(lstm, minmax);
-		Market simulator = new Simulator(readerValidation);
+		Market simulator = new Simulator(readerValidation, 20, 1);
 		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
 		trader.startTrading();
 		trader.close();
@@ -103,7 +104,7 @@ public class LSTMTraining {
 	}
 
 	private static double printTimeLagBaseline(
-			SequenceDataSet<SparseSequence> data,
+			DataSet<SparseSequence> data,
 			Evaluator<SparseSequence> rmse, int timeLag) {
 		for(SparseSequence s : data){
 			for(int t = 0; t < s.getGroundTruthLength(); t++){
@@ -120,7 +121,7 @@ public class LSTMTraining {
 	}
 
 	private static double printBaseline(
-			SequenceDataSet<SparseSequence> data,
+			DataSet<SparseSequence> data,
 			Evaluator<SparseSequence> rmse) {
 		double avgGT = 0;
 		int n = 0;

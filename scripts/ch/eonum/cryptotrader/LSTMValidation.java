@@ -22,9 +22,9 @@ import ch.eonum.pipeline.validation.ParameterValidation;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMValidation {
-	public static final String dataset = "data/LTC_BTC/";
+	public static final String dataset = "data/ALL_MARKETS/";
 	public static final String validationdataset = "data/LTC_BTC_validation/";
-	public static final String resultsFolder = "data/lstm-validation/";
+	public static final String resultsFolder = "data/lstm-validation-all-markets/";
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough

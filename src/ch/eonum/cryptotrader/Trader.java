@@ -7,11 +7,13 @@ import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import ch.eonum.pipeline.core.DataPipeline;
 import ch.eonum.pipeline.core.DataSet;
+import ch.eonum.pipeline.core.Parameters;
 import ch.eonum.pipeline.core.SparseSequence;
 
 /**
@@ -21,7 +23,16 @@ import ch.eonum.pipeline.core.SparseSequence;
  * @author tim
  * 
  */
-public class Trader implements DataPipeline<SparseSequence>  {
+public class Trader extends Parameters implements DataPipeline<SparseSequence> {
+	
+	private static final Map<String, String> PARAMETERS = new HashMap<String, String>();
+	
+	static {
+		PARAMETERS.put("startAfter", "Initial phase where no trades are being made and only data is collected (default 6)");
+		PARAMETERS.put("upperThreshold", "Above this threshold we buy (default 0.65)");
+		PARAMETERS.put("lowerThreshold", "Below this threshold we sell (default 0.35)");
+		PARAMETERS.put("numConsecutive", "At least numConsecutive points have to be above/below threshold (default 3)");
+	}
 
 	/** market forecasting unit. */
 	private PricePredictor predictor;
@@ -36,13 +47,19 @@ public class Trader implements DataPipeline<SparseSequence>  {
 	private boolean close;
 	private List<Double> previousPredictions;
 	private SimpleDateFormat dateFormatter;
+	private PrintWriter balanceLog;
 
 	public Trader(PricePredictor pricePredictor, Market market, String logFileName) throws IOException {
 		this.market = market;
 		this.predictor = pricePredictor;
 		this.log = new PrintWriter(new File(logFileName));
+		this.balanceLog = new PrintWriter(new File(logFileName + ".balances"));
 		this.previousPredictions = new ArrayList<Double>();
 		dateFormatter = new SimpleDateFormat("yyyy-MM-dd kk:mm");
+		this.putParameter("startAfter", 6);
+		this.putParameter("numConsecutive", 3.0);
+		this.putParameter("upperThreshold", 0.65);
+		this.putParameter("lowerThreshold", 0.35);
 	}
 	
 	/**
@@ -51,6 +68,7 @@ public class Trader implements DataPipeline<SparseSequence>  {
 	public void close(){
 		this.close = true;
 		this.log.close();
+		this.balanceLog.close();
 	}
 	
 	/**
@@ -58,12 +76,33 @@ public class Trader implements DataPipeline<SparseSequence>  {
 	 * forever unless stopped using {@link #close()}
 	 */
 	public void startTrading() {
+		Map<String, Double> balances = this.market.getBalances();
+		Map<String, Double> prices = this.market.getPrices();
+		for(String currency : balances.keySet()){
+			this.balanceLog.print(currency + " balance;" + currency + " price;");
+		}
+		this.balanceLog.println("portfolio value;");
+		
 		while(market.hasNext() && !close){
 			Map<String, Double> marketData = market.next();
 			double prediction = predictor.nextPrediction(marketData);
 			this.previousPredictions.add(prediction);
 			log.println(dateFormatter.format(new Date()) + " prediction: " + prediction);
+			int time = this.previousPredictions.size();
 			
+			balances = this.market.getBalances();
+			prices = this.market.getPrices();
+			double portFolioValue = this.market.getPortfolioValue();
+			for(String currency : balances.keySet()){
+				this.balanceLog.print(balances.get(currency) + ";");
+				this.balanceLog.print(prices.get(currency) + ";");
+			}
+			this.balanceLog.println(portFolioValue + ";");
+			
+			if(time > this.getIntParameter("startAfter")){
+				/** start trading. */
+				
+			}
 		}
 	}
 	

@@ -21,12 +21,22 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	private SparseSequence marketData;
 	/** current time in the sequence. */
 	private int currentIndex;
+	private Map<String, Double> balances;
+	private Map<String, Double> prices;
+	private String currencyName;
 
-	public Simulator(CryptsyMarketDataReader dataReader) {
+	public Simulator(CryptsyMarketDataReader dataReader, double initialBalanceX, double initialBalanceBTC) {
 		this.reader = dataReader;
 		SequenceDataSet<SparseSequence> data = dataReader.testSystem();
 		this.marketData = data.get(0);
 		this.currentIndex = 0;
+		this.balances = new HashMap<String, Double>();
+		this.currencyName = marketData.id.replace("/BTC", "");
+		this.balances.put(currencyName , initialBalanceX);
+		this.balances.put("BTC", initialBalanceBTC);
+		this.prices = new HashMap<String, Double>();
+		this.prices.put(currencyName, 0.0);
+		this.prices.put("BTC", 1.0);
 	}
 	
 	@Override
@@ -37,6 +47,25 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	@Override
 	public Map<String, Double> next() {
 		return new HashMap<String, Double>(marketData.getTimePoint(currentIndex++));
+		// #TODO update price
+	}
+	
+	@Override
+	public Map<String, Double> getBalances() {
+		return this.balances;
+	}
+
+	@Override
+	public Map<String, Double> getPrices() {
+		return this.prices;
+	}
+
+	@Override
+	public double getPortfolioValue() {
+		double pfValue = 0;
+		for(String currency : this.balances.keySet())
+			pfValue += this.balances.get(currency) * this.prices.get(currency);
+		return pfValue;
 	}
 
 	@Override

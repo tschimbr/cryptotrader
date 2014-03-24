@@ -111,26 +111,40 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 			}
 			
 			
-			for(String name : markets.keySet()){
-				Map<String, Object> market = (Map<String, Object>)markets.get(name);
-				if(!this.marketsByName.containsKey(name)){
-					SparseSequence seq = new SparseSequence(name, "", new HashMap<String, Double>());
-					seq.initGroundTruthSequence();
-					prevPoint.put(seq, null);
-					floatingAverage.put(seq, singleMarketFeatureExtractionFromJSON(market));
-					previousPoints.put(seq, new ArrayList<Map<String, Double>>());
-					this.marketsByName.put(name, seq );
+			for (String name : markets.keySet()) {
+				try {
+
+					Map<String, Object> market = (Map<String, Object>) markets
+							.get(name);
+					String label = market.get("label").toString();
+					if (!this.marketsByName.containsKey(label)) {
+						SparseSequence seq = new SparseSequence(label, "",
+								new HashMap<String, Double>());
+						seq.initGroundTruthSequence();
+						prevPoint.put(seq, null);
+						floatingAverage.put(seq,
+								singleMarketFeatureExtractionFromJSON(market));
+						previousPoints.put(seq,
+								new ArrayList<Map<String, Double>>());
+						this.marketsByName.put(label, seq);
+					}
+
+					this.currentSequence = this.marketsByName.get(label);
+
+					addPointToSequenceBySingleMarket(floatingAverageFactor,
+							changeNormFactor, timeLag, n, market);
+				} catch (Exception e) {
+					System.err.println("Could not read " + name);
+					this.marketsByName.remove(name);
 				}
-				
-				this.currentSequence = this.marketsByName.get(name);
-				
-				addPointToSequenceBySingleMarket(floatingAverageFactor, changeNormFactor,
-						timeLag, n, market);
 			}
 		}
 		
-		for(SparseSequence e : this.marketsByName.values())
-			data.add(e);
+		for(SparseSequence e : this.marketsByName.values()){
+			e.put("volume", e.get("volume") / e.getSequenceLength());
+			if(e.id.contains("BTC") && e.get("volume") > 10)
+				data.add(e);
+		}
 		
 		return data;
 	}
@@ -219,6 +233,10 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		double meanPrice = mean(prices);
 		
 		point.put("price", meanPrice);
+		if(this.currentSequence != null)
+			this.currentSequence.put("volume",
+					this.currentSequence.get("volume") + point.get("price")
+							* point.get("volume"));
 		point.put("deltaMinMaxPrice", (max(prices) - min(prices))/meanPrice);
 		point.put("stdPrice", std(prices, meanPrice));
 		

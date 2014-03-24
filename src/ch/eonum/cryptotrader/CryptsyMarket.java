@@ -23,4 +23,22 @@ public class CryptsyMarket implements Market {
 		return null;
 	}
 
+	@Override
+	public Map<String, Double> getBalances() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Map<String, Double> getPrices() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public double getPortfolioValue() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }
