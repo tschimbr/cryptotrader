@@ -7,6 +7,7 @@ import ch.eonum.pipeline.core.DataSet;
 import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.evaluation.Evaluator;
+import ch.eonum.pipeline.util.Log;
 
 /**
  * Market place simulator using test data.
@@ -15,27 +16,31 @@ import ch.eonum.pipeline.evaluation.Evaluator;
  */
 public class Simulator implements Evaluator<SparseSequence>, Market  {
 	
+	/** market place fees in %. */
+	public static final double MARKET_FEE = 0.002;
 	/** simulation data. */
 	private SparseSequence marketData;
 	/** current time in the sequence. */
 	private int currentIndex;
-	private Map<String, Double> balances;
-	private Map<String, Double> prices;
+	/** name of the traded currency. */
 	private String currencyName;
 	private double initialPortfolioValue;
+	/** bitcoin balance. */
+	private double btcBalance;
+	/** balance of traded currency X. */
+	private Double xBalance;
+	/** price of traded currency X in bitcoins. */
+	private Double price;
 
 	public Simulator(CryptsyMarketDataReader dataReader, double initialBalanceX, double initialBalanceBTC) {
 		dataReader.doStorePriceData();
 		SequenceDataSet<SparseSequence> data = dataReader.testSystem();
 		this.marketData = data.get(0);
 		this.currentIndex = 0;
-		this.balances = new HashMap<String, Double>();
+		this.btcBalance = initialBalanceBTC;
 		this.currencyName = marketData.id.replace("/BTC", "");
-		this.balances.put(currencyName , initialBalanceX);
-		this.balances.put("BTC", initialBalanceBTC);
-		this.prices = new HashMap<String, Double>();
-		this.prices.put(currencyName, marketData.getTimePoint(0).get("marketPrice"));
-		this.prices.put("BTC", 1.0);
+		this.xBalance = initialBalanceX;
+		this.price = marketData.getTimePoint(0).get("marketPrice");
 		this.initialPortfolioValue = this.getPortfolioValue();
 	}
 	
@@ -47,26 +52,55 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	@Override
 	public Map<String, Double> next() {
 		Map<String, Double> map = marketData.getTimePoint(currentIndex++);	
-		this.prices.put(currencyName, map.get("marketPrice"));
+		price = map.get("marketPrice");
 		return new HashMap<String, Double>(map);
 	}
 	
 	@Override
-	public Map<String, Double> getBalances() {
-		return this.balances;
+	public void placeBuyOrder(double amount, Double buyPrice) {
+		if(buyPrice < price){
+			Log.warn("buy order could not be processed at " + buyPrice
+					+ " (current market price is " + price);
+			return;
+		}
+		this.btcBalance -= amount * buyPrice;
+		this.xBalance += (1-Simulator.MARKET_FEE) * amount;
+	}
+	
+	@Override
+	public void placeSellOrder(double amount, Double sellPrice) {
+		if(sellPrice > price){
+			Log.warn("sell order could not be processed at " + sellPrice
+					+ " (current market price is " + price);
+			return;
+		}
+		this.xBalance -= amount;
+		this.btcBalance += (1-Simulator.MARKET_FEE) * amount  * sellPrice;
+	}
+	
+	@Override
+	public double getBtcBalance() {
+		return this.btcBalance;
+	}
+	
+	@Override
+	public double getBalance() {
+		return this.xBalance;
 	}
 
 	@Override
-	public Map<String, Double> getPrices() {
-		return this.prices;
+	public double getPrice() {
+		return this.price;
+	}
+	
+	@Override
+	public String getCurrencyName() {
+		return this.currencyName;
 	}
 
 	@Override
 	public double getPortfolioValue() {
-		double pfValue = 0;
-		for(String currency : this.balances.keySet())
-			pfValue += this.balances.get(currency) * this.prices.get(currency);
-		return pfValue;
+		return this.btcBalance + this.xBalance * this.price;
 	}
 
 	@Override

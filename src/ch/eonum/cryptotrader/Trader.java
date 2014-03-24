@@ -1,7 +1,6 @@
 package ch.eonum.cryptotrader;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
@@ -77,12 +76,13 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 	 * forever unless stopped using {@link #close()}
 	 */
 	public void startTrading() {
-		Map<String, Double> balances = this.market.getBalances();
-		Map<String, Double> prices = this.market.getPrices();
-		for(String currency : balances.keySet()){
-			this.balanceLog.print(currency + "Balance;" + currency + "Price;");
-		}
-		this.balanceLog.println("portfolioValue;");
+		double btcBalance = this.market.getBtcBalance();
+		double xBalance = this.market.getBalance();
+		double price = this.market.getPrice();
+		String currency = market.getCurrencyName();
+		
+		this.balanceLog.println("BTCBalance;" + currency + "Balance;"
+				+ currency + "Price;portfolioValue;");				
 		
 		while(market.hasNext() && !close){
 			Map<String, Double> marketData = market.next();
@@ -91,18 +91,38 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 			log.println(dateFormatter.format(new Date()) + " prediction: " + prediction);
 			int time = this.previousPredictions.size();
 			
-			balances = this.market.getBalances();
-			prices = this.market.getPrices();
+			btcBalance = this.market.getBtcBalance();
+			xBalance = this.market.getBalance();
+			price = this.market.getPrice();
+			
 			double portFolioValue = this.market.getPortfolioValue();
-			for(String currency : balances.keySet()){
-				this.balanceLog.print(balances.get(currency) + ";");
-				this.balanceLog.print(prices.get(currency) + ";");
-			}
-			this.balanceLog.println(portFolioValue + ";");
+			this.balanceLog.println(btcBalance + ";" + xBalance + ";" + price
+					+ ";" + portFolioValue + ";");
 			
 			if(time > this.getIntParameter("startAfter")){
 				/** start trading. */
-				
+				/** buy. */
+				if(prediction > getDoubleParameter("upperThreshold")
+						&& btcBalance > 0){
+					boolean isStable = true;
+					for(int i = time; i > time - this.getDoubleParameter("numConsecutive"); i--)
+						isStable = isStable && previousPredictions.get(i) > getDoubleParameter("upperThreshold");
+					if(isStable){
+						double amount = btcBalance * 0.5 * price;
+						this.market.placeBuyOrder(amount, price);
+					}
+				}
+				/** sell. */
+				if(prediction < getDoubleParameter("lowerThreshold")
+						&& xBalance > 0){
+					boolean isStable = true;
+					for(int i = time; i > time - this.getDoubleParameter("numConsecutive"); i--)
+						isStable = isStable && previousPredictions.get(i) < getDoubleParameter("lowerThreshold");
+					if(isStable){
+						double amount = xBalance * 0.5;
+						this.market.placeBuyOrder(amount, price);
+					}
+				}
 			}
 		}
 	}

@@ -23,21 +23,47 @@ public interface Market {
 	public Map<String, Double> next();
 
 	/**
-	 * Get all balances in this account by currency.
+	 * Get Bitcoin balance
 	 * @return
 	 */
-	public Map<String, Double> getBalances();
+	public double getBtcBalance();
+	
+	/**
+	 * Get the balance of the traded currency. 
+	 * @return
+	 */
+	public double getBalance();
 
 	/**
-	 * Get all prices in BitCoin by currency.
+	 * Get the price of currency X in BitCoin.
 	 * @return
 	 */
-	public Map<String, Double> getPrices();
+	public double getPrice();
 
 	/**
 	 * Get portfolio value of this account. 
 	 * @return
 	 */
 	public double getPortfolioValue();
+
+	/**
+	 * Get the name of the traded currency.
+	 * @return
+	 */
+	public String getCurrencyName();
+
+	/**
+	 * Place a buy order.
+	 * @param amount
+	 * @param price
+	 */
+	public void placeBuyOrder(double amount, Double price);
+	
+	/**
+	 * Place a sell order.
+	 * @param amount
+	 * @param price
+	 */
+	public void placeSellOrder(double amount, Double price);
 
 }
