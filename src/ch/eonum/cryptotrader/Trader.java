@@ -96,7 +96,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 			price = this.market.getPrice();
 			
 			double portFolioValue = this.market.getPortfolioValue();
-			this.balanceLog.println(btcBalance + ";" + xBalance + ";" + price
+			this.balanceLog.print(btcBalance + ";" + xBalance + ";" + price
 					+ ";" + portFolioValue + ";");
 			
 			if(time > this.getIntParameter("startAfter")){
@@ -105,24 +105,27 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 				if(prediction > getDoubleParameter("upperThreshold")
 						&& btcBalance > 0){
 					boolean isStable = true;
-					for(int i = time; i > time - this.getDoubleParameter("numConsecutive"); i--)
+					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
 						isStable = isStable && previousPredictions.get(i) > getDoubleParameter("upperThreshold");
 					if(isStable){
 						double amount = btcBalance * 0.5 * price;
 						this.market.placeBuyOrder(amount, price);
+						this.balanceLog.print("Buy;" + amount + ";" + price);
 					}
 				}
 				/** sell. */
 				if(prediction < getDoubleParameter("lowerThreshold")
 						&& xBalance > 0){
 					boolean isStable = true;
-					for(int i = time; i > time - this.getDoubleParameter("numConsecutive"); i--)
+					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
 						isStable = isStable && previousPredictions.get(i) < getDoubleParameter("lowerThreshold");
 					if(isStable){
 						double amount = xBalance * 0.5;
-						this.market.placeBuyOrder(amount, price);
+						this.market.placeSellOrder(amount, price);
+						this.balanceLog.print("Sell;" + amount + ";" + price);
 					}
 				}
+				this.balanceLog.println();
 			}
 		}
 	}

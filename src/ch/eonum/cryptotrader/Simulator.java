@@ -63,6 +63,10 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 					+ " (current market price is " + price);
 			return;
 		}
+		if(amount * buyPrice > btcBalance){
+			Log.warn("sell order could not be processed. Not enough Bitcoins (" + btcBalance + ")");
+			return;
+		}
 		this.btcBalance -= amount * buyPrice;
 		this.xBalance += (1-Simulator.MARKET_FEE) * amount;
 	}
@@ -72,6 +76,11 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 		if(sellPrice > price){
 			Log.warn("sell order could not be processed at " + sellPrice
 					+ " (current market price is " + price);
+			return;
+		}
+		if(amount > xBalance){
+			Log.warn("sell order could not be processed. Not enough " + currencyName
+					+ " (" + xBalance + ")");
 			return;
 		}
 		this.xBalance -= amount;
