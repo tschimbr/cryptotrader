@@ -58,9 +58,83 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		this.putParameter("timeLag", 12.0);
 		this.putParameter("changeNormFactor", 40.0);
 	}
-
 	
+	/**
+	 * Read a dataset from folder. Create ground truth targets.
+	 * @param dataset
+	 * @param timeLag offset in time points for the ground truth
+	 * @return
+	 * @throws IOException 
+	 */
+	@SuppressWarnings("unchecked")
+	public SequenceDataSet<SparseSequence> readDataSet(String dataset) throws IOException {	
+		SequenceDataSet<SparseSequence> data = new SequenceDataSet<SparseSequence>();
+		
+		double floatingAverageFactor = this.getDoubleParameter("floatingAverageFactor");
+		double changeNormFactor = this.getDoubleParameter("changeNormFactor");
+		int timeLag = (int) this.getDoubleParameter("timeLag");
+		
+		File directory = new File(dataset);
+		File[] files = directory .listFiles();
 
+		Arrays.sort(files, new Comparator<File>() {
+			public int compare(File f1, File f2) {
+				return Integer.valueOf(f1.getName().compareTo(f2.getName()));
+			}
+		});
+		
+		prevPoint = new HashMap<SparseSequence, Map<String, Double>>();
+		floatingAverage = new HashMap<SparseSequence, Map<String, Double>>();
+		previousPoints = new HashMap<SparseSequence, List<Map<String, Double>>>();
+		 
+		marketsByName = new HashMap<String, SparseSequence>();
+
+		for (int n = 0; n < files.length; n++) {
+			File file = files[n];
+			
+			Map<String, Object> json = JSON.readJSON(file);
+
+			int success = (Integer) json.get("success");
+			if (success != 1) {
+				Log.warn("Unsuccessfull: " + file.getName());
+				return null;
+			}
+			Map<String, Object> res = (Map<String, Object>) json.get("return");
+			if (res == null) {
+				Log.warn("no return entry: " + file.getName());
+				return null;
+			}
+			markets = (Map<String, Object>) res.get("markets");
+			if (markets == null) {
+				Log.warn("no markets entry: " + file.getName());
+				return null;
+			}
+			
+			
+			for(String name : markets.keySet()){
+				Map<String, Object> market = (Map<String, Object>)markets.get(name);
+				if(!this.marketsByName.containsKey(name)){
+					SparseSequence seq = new SparseSequence(name, "", new HashMap<String, Double>());
+					seq.initGroundTruthSequence();
+					prevPoint.put(seq, null);
+					floatingAverage.put(seq, singleMarketFeatureExtractionFromJSON(market));
+					previousPoints.put(seq, new ArrayList<Map<String, Double>>());
+					this.marketsByName.put(name, seq );
+				}
+				
+				this.currentSequence = this.marketsByName.get(name);
+				
+				addPointToSequenceBySingleMarket(floatingAverageFactor, changeNormFactor,
+						timeLag, n, market);
+			}
+		}
+		
+		for(SparseSequence e : this.marketsByName.values())
+			data.add(e);
+		
+		return data;
+	}
+	
 	/**
 	 * Add a single Point to the current sequence. This method can also be used for real
 	 * time updating of a sequence.
@@ -70,7 +144,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	 * @param timeLag
 	 * @param seq
 	 * @param n
-	 * @param file
+	 * @param jsonMarket
 	 * @throws IOException
 	 */
 	public void addPointToSequenceBySingleMarket(double floatingAverageFactor,
@@ -196,81 +270,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		return sum/values.size();
 	}
 
-	/**
-	 * Read a dataset from folder. Create ground truth targets.
-	 * @param dataset
-	 * @param timeLag
-	 * @return
-	 * @throws IOException 
-	 */
-	@SuppressWarnings("unchecked")
-	public SequenceDataSet<SparseSequence> readDataSet(String dataset) throws IOException {	
-		SequenceDataSet<SparseSequence> data = new SequenceDataSet<SparseSequence>();
-		
-		double floatingAverageFactor = this.getDoubleParameter("floatingAverageFactor");
-		double changeNormFactor = this.getDoubleParameter("changeNormFactor");
-		int timeLag = (int) this.getDoubleParameter("timeLag");
-		
-		File directory = new File(dataset);
-		File[] files = directory .listFiles();
-
-		Arrays.sort(files, new Comparator<File>() {
-			public int compare(File f1, File f2) {
-				return Integer.valueOf(f1.getName().compareTo(f2.getName()));
-			}
-		});
-		
-		prevPoint = new HashMap<SparseSequence, Map<String, Double>>();
-		floatingAverage = new HashMap<SparseSequence, Map<String, Double>>();
-		previousPoints = new HashMap<SparseSequence, List<Map<String, Double>>>();
-		 
-		marketsByName = new HashMap<String, SparseSequence>();
-
-		for (int n = 0; n < files.length; n++) {
-			File file = files[n];
-			
-			Map<String, Object> json = JSON.readJSON(file);
-
-			int success = (Integer) json.get("success");
-			if (success != 1) {
-				Log.warn("Unsuccessfull: " + file.getName());
-				return null;
-			}
-			Map<String, Object> res = (Map<String, Object>) json.get("return");
-			if (res == null) {
-				Log.warn("no return entry: " + file.getName());
-				return null;
-			}
-			markets = (Map<String, Object>) res.get("markets");
-			if (markets == null) {
-				Log.warn("no markets entry: " + file.getName());
-				return null;
-			}
-			
-			
-			for(String name : markets.keySet()){
-				Map<String, Object> market = (Map<String, Object>)markets.get(name);
-				if(!this.marketsByName.containsKey(name)){
-					SparseSequence seq = new SparseSequence(name, "", new HashMap<String, Double>());
-					seq.initGroundTruthSequence();
-					prevPoint.put(seq, null);
-					floatingAverage.put(seq, singleMarketFeatureExtractionFromJSON(market));
-					previousPoints.put(seq, new ArrayList<Map<String, Double>>());
-					this.marketsByName.put(name, seq );
-				}
-				
-				this.currentSequence = this.marketsByName.get(name);
-				
-				addPointToSequenceBySingleMarket(floatingAverageFactor, changeNormFactor,
-						timeLag, n, market);
-			}
-		}
-		
-		for(SparseSequence e : this.marketsByName.values())
-			data.add(e);
-		
-		return data;
-	}
+	/** pipeline methods. */
 
 	@Override
 	public SequenceDataSet<SparseSequence> trainSystem(boolean isResultDataSetNeeded) {

@@ -9,4 +9,7 @@ package ch.eonum.cryptotrader;
  */
 public interface Market {
 
+	/** has the market more market data. */
+	boolean hasNext();
+
 }

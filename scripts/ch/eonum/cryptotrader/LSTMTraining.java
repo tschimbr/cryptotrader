@@ -93,6 +93,12 @@ public class LSTMTraining {
 		lstm.test();
 		printPredicitons(dataValidation.get(0), "predictions.csv", features);
 		printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
+		
+		PricePredictor pp = new PricePredictor(lstm, minmax);
+		Market simulator = new Simulator(readerValidation);
+		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
+		trader.startTrading();
+		trader.close();
 
 	}
 
