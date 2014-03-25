@@ -47,20 +47,18 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 	private boolean close;
 	private List<Double> previousPredictions;
 	private SimpleDateFormat dateFormatter;
-	private PrintWriter balanceLog;
 
 	public Trader(PricePredictor pricePredictor, Market market, String logFileName) throws IOException {
 		this.setSupportedParameters(Trader.PARAMETERS);
 		this.market = market;
 		this.predictor = pricePredictor;
 		this.log = new PrintWriter(new File(logFileName));
-		this.balanceLog = new PrintWriter(new File(logFileName + ".balances"));
 		this.previousPredictions = new ArrayList<Double>();
 		dateFormatter = new SimpleDateFormat("yyyy-MM-dd kk:mm");
 		this.putParameter("startAfter", 6);
-		this.putParameter("numConsecutive", 3.0);
-		this.putParameter("upperThreshold", 0.65);
-		this.putParameter("lowerThreshold", 0.35);
+		this.putParameter("numConsecutive", 1.0);
+		this.putParameter("upperThreshold", 0.6);
+		this.putParameter("lowerThreshold", 0.4);
 		this.putParameter("minimumTrade", 0.01);
 	}
 	
@@ -70,7 +68,6 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 	public void close(){
 		this.close = true;
 		this.log.close();
-		this.balanceLog.close();
 	}
 	
 	/**
@@ -83,14 +80,14 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		double price = this.market.getPrice();
 		String currency = market.getCurrencyName();
 		
-		this.balanceLog.println("BTCBalance;" + currency + "Balance;"
+		this.log.println("date;prediction;BTCBalance;" + currency + "Balance;"
 				+ currency + "Price;portfolioValue;");				
 		
 		while(market.hasNext() && !close){
 			Map<String, Double> marketData = market.next();
 			double prediction = predictor.nextPrediction(marketData);
 			this.previousPredictions.add(prediction);
-			log.println(dateFormatter.format(new Date()) + " prediction: " + prediction);
+			log.print(dateFormatter.format(new Date()) + ";" + prediction + ";");
 			int time = this.previousPredictions.size();
 			
 			btcBalance = this.market.getBtcBalance();
@@ -98,7 +95,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 			price = this.market.getPrice();
 			
 			double portFolioValue = this.market.getPortfolioValue();
-			this.balanceLog.print(btcBalance + ";" + xBalance + ";" + price
+			this.log.print(btcBalance + ";" + xBalance + ";" + price
 					+ ";" + portFolioValue + ";");
 			
 			double minimum = this.getDoubleParameter("minimumTrade") * portFolioValue;
@@ -112,10 +109,10 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
 						isStable = isStable && previousPredictions.get(i) > getDoubleParameter("upperThreshold");
 					if(isStable){
-						double amount = (btcBalance * 0.5) / price;
+						double amount = (btcBalance * 0.8) / price;
 						if(amount * price > minimum){
 							this.market.placeBuyOrder(amount, price);
-							this.balanceLog.print("Buy;" + amount + ";" + price);
+							this.log.print("Buy;" + amount + ";" + price);
 						}
 					}
 				}
@@ -126,16 +123,16 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
 						isStable = isStable && previousPredictions.get(i) < getDoubleParameter("lowerThreshold");
 					if(isStable){
-						double amount = xBalance * 0.5;
+						double amount = xBalance * 0.8;
 						if(amount * price > minimum){
 							this.market.placeSellOrder(amount, price);
-							this.balanceLog.print("Sell;" + amount + ";" + price);
+							this.log.print("Sell;" + amount + ";" + price);
 						}
 					}
 				}
 				
 			}
-			this.balanceLog.println();
+			this.log.println();
 		}
 	}
 	

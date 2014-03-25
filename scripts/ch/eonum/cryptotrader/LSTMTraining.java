@@ -21,6 +21,7 @@ import ch.eonum.pipeline.validation.SystemValidator;
 public class LSTMTraining {
 	public static final String dataset = "data/LTC_BTC/";
 	public static final String validationdataset = "data/LTC_BTC_validation/";
+	public static final String testdataset = "data/LTC_BTC_test/";
 	public static final String resultsFolder = "data/lstm/";
 
 	/**
@@ -96,7 +97,7 @@ public class LSTMTraining {
 		printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
 		
 		PricePredictor pp = new PricePredictor(lstm, minmax);
-		Simulator simulator = new Simulator(readerValidation, 20, 1);
+		Simulator simulator = new Simulator(new CryptsyMarketDataReader(testdataset), 20, 1);
 		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
 		trader.startTrading();
 		trader.close();
