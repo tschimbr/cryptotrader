@@ -22,9 +22,9 @@ import ch.eonum.pipeline.validation.ParameterValidation;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMValidation {
-	public static final String dataset = "data/ALL_MARKETS/";
+	public static final String dataset = "data/LTC_BTC/";
 	public static final String validationdataset = "data/LTC_BTC_validation/";
-	public static final String resultsFolder = "data/lstm-validation-all-markets/";
+	public static final String resultsFolder = "data/lstm-validation/";
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough
@@ -82,11 +82,17 @@ public class LSTMValidation {
 		List<ParameterValidation> paramsGradientAscent = new ArrayList<ParameterValidation>();
 		
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "gaussRange", 0.3, 4.0, 0.1,
+				20.0, 1.6, 0.2, false));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "initRange", 0.02, 0.2, 0.01,
+				20.0, 0.06, 0.02, false));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "numLSTM", 4.0, 12.0, 1.0,
 				20.0, 6.0, 1.0, false));
-		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				readerTraining, readerValidation }, "floatingAverageFactor", 0.05, 0.9, 0.01,
-				0.999, 0.3, 0.05, false));			
+//		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+//				readerTraining, readerValidation }, "floatingAverageFactor", 0.05, 0.9, 0.05,
+//				0.999, 0.3, 0.05, false));			
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "momentum", 0.0, 0.9, 0.0,
 				0.99, 0.8, 0.1, false));

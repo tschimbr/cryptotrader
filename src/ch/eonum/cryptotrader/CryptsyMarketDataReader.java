@@ -36,6 +36,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		PARAMETERS.put("floatingAverageFactor", "factor by which the floating average is being adapted 0 < x < 1 (default 0.3)");
 		PARAMETERS.put("timeLag", "time lag for the ground truth in 10min units, which is one element in the sequence (default 12.0)");
 		PARAMETERS.put("changeNormFactor", "norm the ground truth by this factor (default 40.0)");
+		PARAMETERS.put("smooth", "smooth all input points before derivation (default 0.0, no smoothin)");
 		derivatedFeatures.add("price");
 		derivatedFeatures.add("deltaMinMaxPrice");
 		derivatedFeatures.add("volume");
@@ -58,6 +59,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		this.putParameter("floatingAverageFactor", 0.3);
 		this.putParameter("timeLag", 12.0);
 		this.putParameter("changeNormFactor", 40.0);
+		this.putParameter("smooth", 0.0);
 		this.storePriceData = false;
 	}
 	
@@ -74,6 +76,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		
 		double floatingAverageFactor = this.getDoubleParameter("floatingAverageFactor");
 		double changeNormFactor = this.getDoubleParameter("changeNormFactor");
+		double smooth = this.getDoubleParameter("smooth");
 		int timeLag = (int) this.getDoubleParameter("timeLag");
 		
 		File directory = new File(dataset);
@@ -134,7 +137,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 					this.currentSequence = this.marketsByName.get(label);
 
 					addPointToSequenceBySingleMarket(floatingAverageFactor,
-							changeNormFactor, timeLag, n, market);
+							changeNormFactor, smooth, timeLag, n, market);
 				} catch (Exception e) {
 					System.err.println("Could not read " + name);
 					this.marketsByName.remove(name);
@@ -152,8 +155,8 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	}
 	
 	/**
-	 * Add a single Point to the current sequence. This method can also be used for real
-	 * time updating of a sequence.
+	 * Add a single Point to the current sequence (market). This method can also
+	 * be used for real time updating of a sequence.
 	 * 
 	 * @param floatingAverageFactor
 	 * @param changeNormFactor
@@ -164,7 +167,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	 * @throws IOException
 	 */
 	public void addPointToSequenceBySingleMarket(double floatingAverageFactor,
-			double changeNormFactor, int timeLag, int n,
+			double changeNormFactor, double smooth, int timeLag, int n,
 			Map<String, Object> jsonMarket) throws IOException {
 		Map<String, Double> point = this.singleMarketFeatureExtractionFromJSON(jsonMarket);
 		
@@ -178,17 +181,22 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		Map<String, Double> flAvg = floatingAverage.get(currentSequence);
 		Map<String, Double> derivatives = new HashMap<String, Double>();
 		for (String f : flAvg.keySet()) {
+			double value = point.get(f) * (1 - smooth) + smooth * flAvg.get(f);
 			if (derivatedFeatures.contains(f)) {
-				derivatives.put(f, (point.get(f) - flAvg.get(f)) / flAvg.get(f));
+				derivatives.put(f, (value - flAvg.get(f)) / flAvg.get(f));
 				flAvg.put(f, (1 - floatingAverageFactor) * flAvg.get(f)
-						+ floatingAverageFactor * point.get(f));
+						+ floatingAverageFactor * value);
 			} else {
-				derivatives.put(f, point.get(f));
+				derivatives.put(f, value);
 			}
+			point.put(f, value);
 		}
 		if(this.storePriceData)
 			derivatives.put("marketPrice", point.get("price"));
 		this.currentSequence.addTimePoint(derivatives);
+		
+//		for(String f : derivatives.keySet())
+//			derivatives.put(f, 1/(1 + Math.pow(Math.E, - derivatives.get(f))));
 		
 		List<Double> gt = new ArrayList<Double>();
 		gt.add(Double.NaN);
@@ -201,6 +209,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 			double change = (point.get("price") - oldPrice) / oldPrice;
 			change *= changeNormFactor;
 			change += 0.5;
+//			change = 1/(1 + Math.pow(Math.E, -change));
 			this.currentSequence.addGroundTruth(n - timeLag - 1, 0, change);
 			derivatives.put("change_time_lag", change);
 		}
@@ -237,7 +246,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		double meanPrice = mean(prices);
 		
 		point.put("price", meanPrice);
-		if(this.currentSequence != null)
+		if(this.currentSequence != null) /** set market volume for this market. */
 			this.currentSequence.put("volume",
 					this.currentSequence.get("volume") + point.get("price")
 							* point.get("volume"));

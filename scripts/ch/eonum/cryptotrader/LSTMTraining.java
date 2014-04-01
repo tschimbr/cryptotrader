@@ -37,8 +37,13 @@ public class LSTMTraining {
 		
 		CryptsyMarketDataReader readerTraining = new CryptsyMarketDataReader(dataset);
 		CryptsyMarketDataReader readerValidation = new CryptsyMarketDataReader(validationdataset);
+		CryptsyMarketDataReader readerTest = new CryptsyMarketDataReader(testdataset);
 		readerTraining.putParameter("floatingAverageFactor", 0.3);
 		readerValidation.putParameter("floatingAverageFactor", 0.3);
+		readerTest.putParameter("floatingAverageFactor", 0.3);
+		readerTraining.putParameter("smooth", 0.0);
+		readerValidation.putParameter("smooth", 0.0);
+		readerTest.putParameter("smooth", 0.0);
 		
 		DataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
 		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
@@ -69,9 +74,11 @@ public class LSTMTraining {
 		lstm.setBaseDir(resultsFolder + "lstm/");
 		FileUtil.mkdir(resultsFolder + "lstm/");
 		
+//		lstm.putParameter("gaussRange", 0.8);
+//		lstm.putParameter("initRange", 0.12);
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 1.0);
-		lstm.putParameter("maxEpochsAfterMax", 600);
+		lstm.putParameter("maxEpochsAfterMax", 150);
 		lstm.putParameter("maxEpochs", 1000);
 		lstm.putParameter("numLSTM", 6.0);
 		lstm.putParameter("memoryCellBlockSize", 5.0);
@@ -97,7 +104,8 @@ public class LSTMTraining {
 		printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
 		
 		PricePredictor pp = new PricePredictor(lstm, minmax);
-		Simulator simulator = new Simulator(new CryptsyMarketDataReader(testdataset), 20, 1);
+		
+		Simulator simulator = new Simulator(readerTest , 20, 1);
 		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
 		trader.startTrading();
 		trader.close();

@@ -57,8 +57,8 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		dateFormatter = new SimpleDateFormat("yyyy-MM-dd kk:mm");
 		this.putParameter("startAfter", 6);
 		this.putParameter("numConsecutive", 1.0);
-		this.putParameter("upperThreshold", 0.6);
-		this.putParameter("lowerThreshold", 0.4);
+		this.putParameter("upperThreshold", 0.55);
+		this.putParameter("lowerThreshold", 0.45);
 		this.putParameter("minimumTrade", 0.01);
 	}
 	
@@ -80,14 +80,18 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		double price = this.market.getPrice();
 		String currency = market.getCurrencyName();
 		
-		this.log.println("date;prediction;BTCBalance;" + currency + "Balance;"
-				+ currency + "Price;portfolioValue;");				
+		this.log.println("date;prediction;upperThreshold;lowerThreshold;BTCBalance;" + currency + "Balance;"
+				+ currency + "Price;portfolioValue;");		
+		
+		double upperThreshold = getDoubleParameter("upperThreshold");
+		double lowerThreshold = getDoubleParameter("lowerThreshold");
 		
 		while(market.hasNext() && !close){
 			Map<String, Double> marketData = market.next();
 			double prediction = predictor.nextPrediction(marketData);
 			this.previousPredictions.add(prediction);
 			log.print(dateFormatter.format(new Date()) + ";" + prediction + ";");
+			log.print(upperThreshold + ";" + lowerThreshold + ";");
 			int time = this.previousPredictions.size();
 			
 			btcBalance = this.market.getBtcBalance();
@@ -103,7 +107,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 			if(time > this.getIntParameter("startAfter")){
 				/** start trading. */
 				/** buy. */
-				if(prediction > getDoubleParameter("upperThreshold")
+				if(prediction > upperThreshold
 						&& btcBalance > 0){
 					boolean isStable = true;
 					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
@@ -114,10 +118,12 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 							this.market.placeBuyOrder(amount, price);
 							this.log.print("Buy;" + amount + ";" + price);
 						}
+//						upperThreshold += 0.02;
+//						lowerThreshold -= 0.02;
 					}
 				}
 				/** sell. */
-				if(prediction < getDoubleParameter("lowerThreshold")
+				else if(prediction < lowerThreshold
 						&& xBalance > 0){
 					boolean isStable = true;
 					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
@@ -128,7 +134,12 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 							this.market.placeSellOrder(amount, price);
 							this.log.print("Sell;" + amount + ";" + price);
 						}
+//						lowerThreshold += 0.02;
+//						upperThreshold -= 0.02;
 					}
+				} else {
+//					lowerThreshold += 0.002;
+//					upperThreshold -= 0.002;
 				}
 				
 			}
