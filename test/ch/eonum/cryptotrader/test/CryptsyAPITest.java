@@ -17,7 +17,7 @@ public class CryptsyAPITest {
 
 	@Before
 	public void setUp() throws IOException{
-		this.api = new CryptsyMarket(3, new CryptsyMarketDataReader(null));
+		this.api = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
 	}
 	
 	@Test
@@ -29,7 +29,6 @@ public class CryptsyAPITest {
 	public void testGetMarketData(){
 		assertTrue(this.api.hasNext());
 		Map<String, Double> map = this.api.next();
-		assertTrue(map.containsKey("change_time_lag"));
 		assertTrue(map.containsKey("daytime"));
 		assertTrue(map.containsKey("deltaBuyOrders"));
 		assertTrue(map.containsKey("deltaMinMaxPrice"));

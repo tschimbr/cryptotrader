@@ -1,11 +1,14 @@
 package ch.eonum.cryptotrader;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
@@ -30,8 +33,12 @@ public class CryptsyMarket implements Market {
 	private int n;
 	private SparseSequence sequence;
 	private double price;
+	private String apiConfigFolder;
+	private int nonce;
+	private String publicKey;
+	private String privateKey;
 
-	public CryptsyMarket(int marketId, CryptsyMarketDataReader dataReader) throws IOException {
+	public CryptsyMarket(int marketId, CryptsyMarketDataReader dataReader, String apiConfigFolder) throws IOException {
 		this.marketId = marketId;
 		Map<String, Object> json = this
 				.retrieveJsonFromUrl("http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid="
@@ -50,6 +57,10 @@ public class CryptsyMarket implements Market {
 		this.dataReader.doStorePriceData();
 		this.n = 0;
 		
+		this.apiConfigFolder = apiConfigFolder;
+		this.nonce = Integer.parseInt(readString(apiConfigFolder + "nonce"));
+		this.publicKey = readString(apiConfigFolder + "public");
+		this.privateKey = readString(apiConfigFolder + "private");
 	}
 
 	@Override
@@ -153,6 +164,14 @@ public class CryptsyMarket implements Market {
 		}
 
 		return (Map<String, Object>) markets.values().iterator().next();		
+	}
+	
+
+	private String readString(String fileName) throws IOException {
+		Scanner scanner = new Scanner(new File(fileName));
+		String line = scanner.nextLine();
+		scanner.close();
+		return line;
 	}
 
 }
