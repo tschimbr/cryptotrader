@@ -2,7 +2,6 @@ package ch.eonum.cryptotrader;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
@@ -12,6 +11,10 @@ import java.util.Scanner;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
+
+import com.abwaters.cryptsy.Cryptsy;
+import com.abwaters.cryptsy.Cryptsy.CryptsyException;
+import com.abwaters.cryptsy.Cryptsy.InfoReturn;
 
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.util.Log;
@@ -34,11 +37,12 @@ public class CryptsyMarket implements Market {
 	private SparseSequence sequence;
 	private double price;
 	private String apiConfigFolder;
-	private int nonce;
 	private String publicKey;
 	private String privateKey;
+	private Cryptsy cryptsy;
+	private InfoReturn info;
 
-	public CryptsyMarket(int marketId, CryptsyMarketDataReader dataReader, String apiConfigFolder) throws IOException {
+	public CryptsyMarket(int marketId, CryptsyMarketDataReader dataReader, String apiConfigFolder) throws IOException, CryptsyException {
 		this.marketId = marketId;
 		Map<String, Object> json = this
 				.retrieveJsonFromUrl("http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid="
@@ -58,9 +62,15 @@ public class CryptsyMarket implements Market {
 		this.n = 0;
 		
 		this.apiConfigFolder = apiConfigFolder;
-		this.nonce = Integer.parseInt(readString(apiConfigFolder + "nonce"));
 		this.publicKey = readString(apiConfigFolder + "public");
 		this.privateKey = readString(apiConfigFolder + "private");
+		
+		this.cryptsy = new Cryptsy();
+		cryptsy.setAuthKeys(publicKey, privateKey);
+		cryptsy.setAuthRequestLimit(1500);
+		cryptsy.setRequestLimit(1000);
+		
+		this.info = cryptsy.getInfo();
 	}
 
 	@Override
@@ -85,8 +95,13 @@ public class CryptsyMarket implements Market {
 					changeNormFactor, smooth, timeLag, n, this.currentMarket);
 			Map<String, Double> map = sequence.getTimePoint(n++);	
 			this.price = map.get("marketPrice");
+			/** update market info. */
+			this.info = cryptsy.getInfo();
 			return new HashMap<String, Double>(map);
 		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (CryptsyException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -95,20 +110,17 @@ public class CryptsyMarket implements Market {
 
 	@Override
 	public double getPortfolioValue() {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.getBtcBalance() + this.getPrice() * this.getBalance();
 	}
 
 	@Override
 	public double getBtcBalance() {
-		// TODO Auto-generated method stub
-		return 0;
+		return info.balances_available.get("BTC"); 
 	}
 
 	@Override
 	public double getBalance() {
-		// TODO Auto-generated method stub
-		return 0;
+		return info.balances_available.get(this.currencyName);
 	}
 
 	@Override
@@ -173,5 +185,4 @@ public class CryptsyMarket implements Market {
 		scanner.close();
 		return line;
 	}
-
 }

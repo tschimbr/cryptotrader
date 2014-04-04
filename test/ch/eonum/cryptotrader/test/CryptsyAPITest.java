@@ -3,10 +3,14 @@ package ch.eonum.cryptotrader.test;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import com.abwaters.cryptsy.Cryptsy.CryptsyException;
 
 import ch.eonum.cryptotrader.CryptsyMarket;
 import ch.eonum.cryptotrader.CryptsyMarketDataReader;
@@ -16,7 +20,7 @@ public class CryptsyAPITest {
 	private CryptsyMarket api;
 
 	@Before
-	public void setUp() throws IOException{
+	public void setUp() throws IOException, CryptsyException{
 		this.api = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
 	}
 	
@@ -38,6 +42,21 @@ public class CryptsyAPITest {
 		assertTrue(map.containsKey("spread"));
 		assertTrue(map.containsKey("stdPrice"));
 		assertTrue(map.containsKey("volume"));
+	}
+	
+	@Test
+	public void getBTCBalance(){
+		assertTrue(this.api.getBtcBalance() > 0);
+	}
+	
+	@Test
+	public void getBalance(){
+		assertTrue(this.api.getBalance() > 0);
+	}
+	
+	@Test
+	public void getPortfolioValue(){
+		assertEquals(this.api.getBalance() * this.api.getPrice() + this.api.getBtcBalance(), this.api.getPortfolioValue(), 0.0000001);
 	}
 
 }
