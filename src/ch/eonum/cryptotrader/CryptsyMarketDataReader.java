@@ -64,6 +64,26 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	}
 	
 	/**
+	 * Initialization of the reader if used for real time updating.
+	 * @param sequence 
+	 * @param initialMarketData 
+	 */
+	public void init(SparseSequence sequence, Map<String, Object> initialMarketData){
+		prevPoint = new HashMap<SparseSequence, Map<String, Double>>();
+		floatingAverage = new HashMap<SparseSequence, Map<String, Double>>();
+		previousPoints = new HashMap<SparseSequence, List<Map<String, Double>>>();
+		
+		this.currentSequence = sequence;
+		
+		this.currentSequence.initGroundTruthSequence();
+		prevPoint.put(this.currentSequence, null);
+		floatingAverage.put(this.currentSequence,
+				singleMarketFeatureExtractionFromJSON(initialMarketData));
+		previousPoints.put(this.currentSequence,
+				new ArrayList<Map<String, Double>>());
+	}
+	
+	/**
 	 * Read a dataset from folder. Create ground truth targets.
 	 * @param dataset
 	 * @param timeLag offset in time points for the ground truth

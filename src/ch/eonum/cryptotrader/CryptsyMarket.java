@@ -4,11 +4,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 
+import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.util.Log;
 
 /**
@@ -23,18 +25,31 @@ public class CryptsyMarket implements Market {
 	/** market id. E.g. 132 for DOGE/BTC. */
 	private int marketId;
 	private String currencyName;
+	private Map<String, Object> currentMarket;
+	private CryptsyMarketDataReader dataReader;
+	private int n;
+	private SparseSequence sequence;
+	private double price;
 
-	public CryptsyMarket(int marketId) throws IOException {
+	public CryptsyMarket(int marketId, CryptsyMarketDataReader dataReader) throws IOException {
 		this.marketId = marketId;
 		Map<String, Object> json = this
 				.retrieveJsonFromUrl("http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid="
 						+ this.marketId);
 		
-		Map<String, Object> market = this.getMarketFromJson(json);
-		String marketLabel = market.get("label").toString();
+		this.currentMarket = this.getMarketFromJson(json);
+		
+		String marketLabel = currentMarket.get("label").toString();
 		if(!marketLabel.contains("BTC"))
 			Log.error("This is no Bitcoin market!");
 		this.currencyName = marketLabel.split("/")[0];
+		
+		this.dataReader = dataReader;
+		this.sequence = new SparseSequence(this.currencyName, "", new HashMap<String, Double>());
+		this.dataReader.init(this.sequence, this.currentMarket);
+		this.dataReader.doStorePriceData();
+		this.n = 0;
+		
 	}
 
 	@Override
@@ -45,7 +60,25 @@ public class CryptsyMarket implements Market {
 
 	@Override
 	public Map<String, Double> next() {
-		// TODO Auto-generated method stub
+		try {
+			Map<String, Object> json = this
+					.retrieveJsonFromUrl("http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid="
+							+ this.marketId);
+			this.currentMarket = this.getMarketFromJson(json);
+			double floatingAverageFactor = dataReader.getDoubleParameter("floatingAverageFactor");
+			double changeNormFactor = dataReader.getDoubleParameter("changeNormFactor");
+			double smooth = dataReader.getDoubleParameter("smooth");
+			int timeLag = (int) dataReader.getDoubleParameter("timeLag");
+			
+			this.dataReader.addPointToSequenceBySingleMarket(floatingAverageFactor,
+					changeNormFactor, smooth, timeLag, n, this.currentMarket);
+			Map<String, Double> map = sequence.getTimePoint(n++);	
+			this.price = map.get("marketPrice");
+			return new HashMap<String, Double>(map);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		return null;
 	}
 
@@ -69,8 +102,7 @@ public class CryptsyMarket implements Market {
 
 	@Override
 	public double getPrice() {
-		// TODO Auto-generated method stub
-		return 0;
+		return price;
 	}
 
 	@Override
@@ -98,9 +130,7 @@ public class CryptsyMarket implements Market {
         ObjectMapper mapper = new ObjectMapper();
 		Map<String, Object> json = mapper.readValue(in, new TypeReference<Map<String, Object>>() { });
 		in.close();
-		return json ;
-		
-	   
+		return json;
 	}
 	
 
