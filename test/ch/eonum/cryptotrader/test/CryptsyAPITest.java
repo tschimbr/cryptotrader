@@ -3,8 +3,6 @@ package ch.eonum.cryptotrader.test;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
 import org.junit.Before;
@@ -58,5 +56,17 @@ public class CryptsyAPITest {
 	public void getPortfolioValue(){
 		assertEquals(this.api.getBalance() * this.api.getPrice() + this.api.getBtcBalance(), this.api.getPortfolioValue(), 0.0000001);
 	}
+	
+	/**
+	 * This test has monetary side effects!!!!!
+	 * Use it only wisely and rarely.
+	 */
+//	@Test
+//	public void testPlaceOrder(){
+//		this.api.next();
+//		double price = this.api.getPrice();
+//		double amount = this.api.getBalance() * 0.01;
+//		this.api.placeSellOrder(amount, price);
+//	}
 
 }

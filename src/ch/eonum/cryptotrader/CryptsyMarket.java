@@ -15,6 +15,7 @@ import org.codehaus.jackson.type.TypeReference;
 import com.abwaters.cryptsy.Cryptsy;
 import com.abwaters.cryptsy.Cryptsy.CryptsyException;
 import com.abwaters.cryptsy.Cryptsy.InfoReturn;
+import com.abwaters.cryptsy.Cryptsy.OrderTypes;
 
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.util.Log;
@@ -36,7 +37,6 @@ public class CryptsyMarket implements Market {
 	private int n;
 	private SparseSequence sequence;
 	private double price;
-	private String apiConfigFolder;
 	private String publicKey;
 	private String privateKey;
 	private Cryptsy cryptsy;
@@ -52,7 +52,7 @@ public class CryptsyMarket implements Market {
 		
 		String marketLabel = currentMarket.get("label").toString();
 		if(!marketLabel.contains("BTC"))
-			Log.error("This is no Bitcoin market!");
+			Log.error("This is not a Bitcoin market!");
 		this.currencyName = marketLabel.split("/")[0];
 		
 		this.dataReader = dataReader;
@@ -61,7 +61,6 @@ public class CryptsyMarket implements Market {
 		this.dataReader.doStorePriceData();
 		this.n = 0;
 		
-		this.apiConfigFolder = apiConfigFolder;
 		this.publicKey = readString(apiConfigFolder + "public");
 		this.privateKey = readString(apiConfigFolder + "private");
 		
@@ -82,6 +81,8 @@ public class CryptsyMarket implements Market {
 	@Override
 	public Map<String, Double> next() {
 		try {
+			/** first cancel all orders in this market. */
+			this.cryptsy.cancelMarketOrders(this.marketId);
 			Map<String, Object> json = this
 					.retrieveJsonFromUrl("http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid="
 							+ this.marketId);
@@ -135,14 +136,22 @@ public class CryptsyMarket implements Market {
 
 	@Override
 	public void placeBuyOrder(double amount, Double price) {
-		// TODO Auto-generated method stub
-		
+		try {
+			cryptsy.createOrder(marketId, OrderTypes.Buy, amount, price);
+		} catch (CryptsyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	public void placeSellOrder(double amount, Double price) {
-		// TODO Auto-generated method stub
-		
+		try {
+			cryptsy.createOrder(marketId, OrderTypes.Sell, amount, price);
+		} catch (CryptsyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	private Map<String, Object> retrieveJsonFromUrl(String urlString) throws IOException {

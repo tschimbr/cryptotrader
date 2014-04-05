@@ -114,7 +114,7 @@ public class LSTMTraining {
 
 	}
 
-	private static double printTimeLagBaseline(
+	public static double printTimeLagBaseline(
 			DataSet<SparseSequence> data,
 			Evaluator<SparseSequence> rmse, int timeLag) {
 		for(SparseSequence s : data){
@@ -131,7 +131,7 @@ public class LSTMTraining {
 		return rmse.evaluate(data);
 	}
 
-	private static double printBaseline(
+	public static double printBaseline(
 			DataSet<SparseSequence> data,
 			Evaluator<SparseSequence> rmse) {
 		double avgGT = 0;
