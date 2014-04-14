@@ -59,8 +59,8 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		dateFormatter = new SimpleDateFormat("yyyy-MM-dd kk:mm");
 		this.putParameter("startAfter", 6);
 		this.putParameter("numConsecutive", 1.0);
-		this.putParameter("upperThreshold", 0.55);
-		this.putParameter("lowerThreshold", 0.45);
+		this.putParameter("upperThreshold", 0.56);
+		this.putParameter("lowerThreshold", 0.44);
 		this.putParameter("minimumTrade", 0.01);
 		this.putParameter("waitMillis", 0);
 	}

@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.ParseException;
 
+import com.abwaters.cryptsy.Cryptsy.CryptsyException;
+
 import ch.eonum.pipeline.classification.lstm.LSTM;
 import ch.eonum.pipeline.core.DataSet;
 import ch.eonum.pipeline.core.Features;
@@ -19,9 +21,9 @@ import ch.eonum.pipeline.util.FileUtil;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMTraining {
-	public static final String dataset = "data/LTC_BTC/";
-	public static final String validationdataset = "data/LTC_BTC/";
-	public static final String testdataset = "data/LTC_BTC_test/";
+	public static final String dataset = "data/archiv/LTC_BTC/";
+	public static final String validationdataset = "data/archiv/LTC_BTC_validation/";
+	public static final String testdataset = "data/archiv/LTC_BTC_test/";
 	public static final String resultsFolder = "data/lstm/";
 
 	/**
@@ -31,8 +33,9 @@ public class LSTMTraining {
 	 * @param args
 	 * @throws IOException 
 	 * @throws ParseException 
+	 * @throws CryptsyException 
 	 */
-	public static void main(String[] args) throws IOException, ParseException {
+	public static void main(String[] args) throws IOException, ParseException, CryptsyException {
 		FileUtil.mkdir(resultsFolder);
 		
 		CryptsyMarketDataReader readerTraining = new CryptsyMarketDataReader(dataset);
@@ -85,6 +88,7 @@ public class LSTMTraining {
 		lstm.putParameter("numHidden", 0.0);
 		lstm.putParameter("learningRate", 0.004);
 		lstm.putParameter("momentum", 0.8);
+//		lstm.putParameter("lambda", 0.000001);
 		
 		SystemValidator<SparseSequence> lstmSystem = new SystemValidator<SparseSequence>(lstm, rmse);
 		lstmSystem.setBaseDir(resultsFolder);		
@@ -105,13 +109,15 @@ public class LSTMTraining {
 		
 		PricePredictor pp = new PricePredictor(lstm, minmax);
 		
-		Simulator simulator = new Simulator(readerTest , 20, 1);
-		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
-		trader.putParameter("waitMillis", 0);
+//		Simulator simulator = new Simulator(readerTest , 20, 1);
+//		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
+		CryptsyMarket cryptsy = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
+		Trader trader = new Trader(pp, cryptsy, resultsFolder + "tradingLog.txt");
+		trader.putParameter("waitMillis", 1000*60*10);
 		trader.startTrading();
 		trader.close();
 		
-		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
+//		System.out.println("Portfolio Value change: " + cryptsy.evaluate(null));
 
 	}
 

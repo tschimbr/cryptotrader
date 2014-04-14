@@ -57,7 +57,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		this.inputFolder = inputFolder;
 		this.setSupportedParameters(CryptsyMarketDataReader.PARAMETERS);
 		this.putParameter("floatingAverageFactor", 0.3);
-		this.putParameter("timeLag", 12.0);
+		this.putParameter("timeLag", 6.0);
 		this.putParameter("changeNormFactor", 40.0);
 		this.putParameter("smooth", 0.0);
 		this.storePriceData = false;
