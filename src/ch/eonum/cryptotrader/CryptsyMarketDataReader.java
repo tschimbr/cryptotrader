@@ -203,9 +203,13 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		for (String f : flAvg.keySet()) {
 			double value = point.get(f) * (1 - smooth) + smooth * flAvg.get(f);
 			if (derivatedFeatures.contains(f)) {
-				derivatives.put(f, (value - flAvg.get(f)) / flAvg.get(f));
+				derivatives.put(f, (value - flAvg.get(f)));
 				flAvg.put(f, (1 - floatingAverageFactor) * flAvg.get(f)
 						+ floatingAverageFactor * value);
+				if(Double.isNaN(derivatives.get(f)))
+					derivatives.put(f, 0.);
+				if(Double.isInfinite(derivatives.get(f)))
+					derivatives.put(f, 0.);
 			} else {
 				derivatives.put(f, value);
 			}

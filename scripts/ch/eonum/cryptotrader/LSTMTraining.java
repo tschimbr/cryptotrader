@@ -20,7 +20,7 @@ import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMTraining {
 	public static final String dataset = "data/LTC_BTC/";
-	public static final String validationdataset = "data/LTC_BTC_validation/";
+	public static final String validationdataset = "data/LTC_BTC/";
 	public static final String testdataset = "data/LTC_BTC_test/";
 	public static final String resultsFolder = "data/lstm/";
 
@@ -107,6 +107,7 @@ public class LSTMTraining {
 		
 		Simulator simulator = new Simulator(readerTest , 20, 1);
 		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
+		trader.putParameter("waitMillis", 0);
 		trader.startTrading();
 		trader.close();
 		

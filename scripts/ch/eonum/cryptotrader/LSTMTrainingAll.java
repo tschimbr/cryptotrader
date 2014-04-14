@@ -57,7 +57,7 @@ public class LSTMTrainingAll {
 		Evaluator<SparseSequence> rmse = new RMSESequence<SparseSequence>();
 		
 		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
-		lstm.setTestSet(dataTraining);
+		lstm.setTestSet(dataValidation);
 		lstm.setTrainingSet(dataTraining);
 		
 		lstm.setForgetGateUse(false);

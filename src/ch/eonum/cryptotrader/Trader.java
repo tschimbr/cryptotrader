@@ -14,6 +14,7 @@ import ch.eonum.pipeline.core.DataPipeline;
 import ch.eonum.pipeline.core.DataSet;
 import ch.eonum.pipeline.core.Parameters;
 import ch.eonum.pipeline.core.SparseSequence;
+import ch.eonum.pipeline.util.Log;
 
 /**
  * Trading bot. A Trader uses a PricePredictor to predict market prices and
@@ -32,6 +33,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		PARAMETERS.put("lowerThreshold", "Below this threshold we sell (default 0.35)");
 		PARAMETERS.put("numConsecutive", "At least numConsecutive points have to be above/below threshold (default 3)");
 		PARAMETERS.put("minimumTrade", "minimum size of trade in % of portfolio value. (0.01)");
+		PARAMETERS.put("waitMillis", "number of milliseconds to wait after each step (default 0)");
 	}
 
 	/** market forecasting unit. */
@@ -60,6 +62,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		this.putParameter("upperThreshold", 0.55);
 		this.putParameter("lowerThreshold", 0.45);
 		this.putParameter("minimumTrade", 0.01);
+		this.putParameter("waitMillis", 0);
 	}
 	
 	/**
@@ -85,6 +88,9 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		
 		double upperThreshold = getDoubleParameter("upperThreshold");
 		double lowerThreshold = getDoubleParameter("lowerThreshold");
+		long waitMillis = getIntParameter("waitMillis");
+		long start = System.currentTimeMillis();
+		long step = 0;
 		
 		while(market.hasNext() && !close){
 			Map<String, Double> marketData = market.next();
@@ -144,6 +150,20 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 				
 			}
 			this.log.println();
+			
+			/** wait if needed. */
+			step++;
+			long targetTime = start + step * waitMillis;
+			long currentTime = System.currentTimeMillis();
+			long waitFor = targetTime - currentTime;
+			Log.puts("Trader sleeping for " + (waitFor) + " milliseconds");
+			try {
+				if(waitFor > 0)
+					Thread.sleep(waitFor);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	

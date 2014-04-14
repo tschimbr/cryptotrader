@@ -22,9 +22,9 @@ import ch.eonum.pipeline.validation.ParameterValidation;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMValidation {
-	public static final String dataset = "data/LTC_BTC/";
-	public static final String validationdataset = "data/LTC_BTC_validation/";
-	public static final String resultsFolder = "data/lstm-validation/";
+	public static final String dataset = "data/ALL_MARKETS_Training/";
+	public static final String validationdataset = "data/ALL_MARKETS_Validation/";
+	public static final String resultsFolder = "data/lstm-validation-all/";
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough
@@ -70,7 +70,7 @@ public class LSTMValidation {
 		lstm.putParameter("numNetsTotal", 1.0);
 		lstm.putParameter("maxEpochsAfterMax", 200);
 		lstm.putParameter("maxEpochs", 500);
-		lstm.putParameter("numLSTM", 6.0);
+		lstm.putParameter("numLSTM", 4.0);
 		lstm.putParameter("memoryCellBlockSize", 5.0);
 		lstm.putParameter("numHidden", 0.0);
 		lstm.putParameter("learningRate", 0.004);
@@ -81,6 +81,23 @@ public class LSTMValidation {
 		
 		List<ParameterValidation> paramsGradientAscent = new ArrayList<ParameterValidation>();
 		
+		
+		
+//		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+//				readerTraining, readerValidation }, "floatingAverageFactor", 0.05, 0.9, 0.05,
+//				0.999, 0.3, 0.05, false));			
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "momentum", 0.0, 0.9, 0.0,
+				0.99, 0.8, 0.1, false));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "batchSize", 1.0, 10.0, 1.0,
+				20.0, 1.0, 2.0, false));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "learningRate", -14, -2, -8,
+				0.0, 0.004, 1.0, true));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "memoryCellBlockSize", 1.0, 8.0, 1.0,
+				20.0, 5.0, 1.0, false));
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "gaussRange", 0.3, 4.0, 0.1,
 				20.0, 1.6, 0.2, false));
@@ -90,21 +107,6 @@ public class LSTMValidation {
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "numLSTM", 4.0, 12.0, 1.0,
 				20.0, 6.0, 1.0, false));
-//		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-//				readerTraining, readerValidation }, "floatingAverageFactor", 0.05, 0.9, 0.05,
-//				0.999, 0.3, 0.05, false));			
-		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				lstm }, "momentum", 0.0, 0.9, 0.0,
-				0.99, 0.8, 0.1, false));
-//		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-//				lstm }, "batchSize", 1.0, 100.0, 1.0,
-//				200.0, 1.0, 20.0, false));
-		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				lstm }, "learningRate", -14, -2, -8,
-				0.0, 0.004, 1.0, true));
-		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				lstm }, "memoryCellBlockSize", 1.0, 8.0, 1.0,
-				20.0, 5.0, 1.0, false));
 		
 
 		Map<ParameterValidation, Double> params = lstmSystem.gradientAscent(paramsGradientAscent, 5, resultsFolder + "parameter_validation/");
