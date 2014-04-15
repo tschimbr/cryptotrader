@@ -91,8 +91,8 @@ public class LSTMTrainingAll {
 		lstm.test();
 		lstm.setTestSet(dataValidation);
 		lstm.test();
-		LSTMTraining.printPredicitons(dataValidation.get(0), "predictions.csv", features);
-		LSTMTraining.printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
+//		LSTMTraining.printPredicitons(dataValidation.get(0), "predictions.csv", features);
+//		LSTMTraining.printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
 
 	}
 

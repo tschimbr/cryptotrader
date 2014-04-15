@@ -14,6 +14,7 @@ import ch.eonum.pipeline.core.Parameters;
 import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.evaluation.Evaluator;
+import ch.eonum.pipeline.evaluation.RMSE;
 import ch.eonum.pipeline.evaluation.RMSESequence;
 import ch.eonum.pipeline.transformation.MinMaxNormalizerSequence;
 import ch.eonum.pipeline.util.FileUtil;
@@ -53,7 +54,7 @@ public class LSTMValidation {
 		minmax.addInputTest(readerValidation);
 		minmax.addInputTraining(readerTraining);
 				
-		Evaluator<SparseSequence> rmse = new RMSESequence<SparseSequence>();
+		Evaluator<SparseSequence> rmse = new RMSE<SparseSequence>();
 		
 		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
 		lstm.addInputTest(minmax);
@@ -85,25 +86,25 @@ public class LSTMValidation {
 		
 //		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 //				readerTraining, readerValidation }, "floatingAverageFactor", 0.05, 0.9, 0.05,
-//				0.999, 0.3, 0.05, false));			
+//				0.999, 0.3, 0.05, false));		
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				lstm }, "learningRate", -14, -2, -8,
+				0.0, 0.004, 1.0, true));
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "momentum", 0.0, 0.9, 0.0,
 				0.99, 0.8, 0.1, false));
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "batchSize", 1.0, 10.0, 1.0,
-				20.0, 1.0, 2.0, false));
-		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				lstm }, "learningRate", -14, -2, -8,
-				0.0, 0.004, 1.0, true));
+				20.0, 1.0, 2.0, false));	
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "memoryCellBlockSize", 1.0, 8.0, 1.0,
 				20.0, 5.0, 1.0, false));
-		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				lstm }, "gaussRange", 0.3, 4.0, 0.1,
-				20.0, 1.6, 0.2, false));
-		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				lstm }, "initRange", 0.02, 0.2, 0.01,
-				20.0, 0.06, 0.02, false));
+//		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+//				lstm }, "gaussRange", 0.3, 4.0, 0.1,
+//				20.0, 1.6, 0.2, false));
+//		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+//				lstm }, "initRange", 0.02, 0.2, 0.01,
+//				20.0, 0.06, 0.02, false));
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "numLSTM", 4.0, 12.0, 1.0,
 				20.0, 6.0, 1.0, false));

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import ch.eonum.pipeline.core.DataPipeline;
+import ch.eonum.pipeline.core.DataSet;
 import ch.eonum.pipeline.core.Parameters;
 import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
@@ -170,8 +171,27 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 			if(e.id.contains("BTC") && e.get("volume") > 10)
 				data.add(e);
 		}
-		
+		data = splitSequences(18, data);
 		return data;
+	}
+	
+	/** Split sequences into n element sequences. */
+	public SequenceDataSet<SparseSequence> splitSequences(int n,
+			DataSet<SparseSequence> data) {
+		SequenceDataSet<SparseSequence> newSet = new SequenceDataSet<SparseSequence>();
+		for(SparseSequence s : data){
+			for(int i = n; i < s.getSequenceLength(); i++){
+				SparseSequence copy = new SparseSequence(s.id + "-" + i, "", new HashMap<String, Double>());
+				copy.outcome = s.groundTruthAt(i-1, 0);
+				for(int j = i - n; j < i; j++){
+					copy.addTimePoint(new HashMap<String, Double>(s.getTimePoint(j)));
+				}
+				if(!Double.isNaN(copy.outcome))
+					newSet.add(copy);
+			}
+		}
+		
+		return newSet;
 	}
 	
 	/**

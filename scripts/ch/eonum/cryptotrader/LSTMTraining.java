@@ -6,15 +6,16 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.ParseException;
+import java.util.HashMap;
 
 import com.abwaters.cryptsy.Cryptsy.CryptsyException;
 
 import ch.eonum.pipeline.classification.lstm.LSTM;
 import ch.eonum.pipeline.core.DataSet;
 import ch.eonum.pipeline.core.Features;
-import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.evaluation.Evaluator;
+import ch.eonum.pipeline.evaluation.RMSE;
 import ch.eonum.pipeline.evaluation.RMSESequence;
 import ch.eonum.pipeline.transformation.MinMaxNormalizerSequence;
 import ch.eonum.pipeline.util.FileUtil;
@@ -44,7 +45,7 @@ public class LSTMTraining {
 		
 		
 		DataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
-		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
+		DataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
 		
 		@SuppressWarnings("unchecked")
 		Features features = Features.createFromDataSets(new DataSet[] {
@@ -59,7 +60,7 @@ public class LSTMTraining {
 		minmax.extract();
 		
 				
-		Evaluator<SparseSequence> rmse = new RMSESequence<SparseSequence>();
+		Evaluator<SparseSequence> rmse = new RMSE<SparseSequence>();
 		
 		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
 		lstm.setTestSet(dataValidation);
@@ -76,12 +77,12 @@ public class LSTMTraining {
 //		lstm.putParameter("initRange", 0.12);
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 1.0);
-		lstm.putParameter("maxEpochsAfterMax", 150);
-		lstm.putParameter("maxEpochs", 1000);
+		lstm.putParameter("maxEpochsAfterMax", 300);
+		lstm.putParameter("maxEpochs", 20);
 		lstm.putParameter("numLSTM", 6.0);
 		lstm.putParameter("memoryCellBlockSize", 5.0);
 		lstm.putParameter("numHidden", 0.0);
-		lstm.putParameter("learningRate", 0.004);
+		lstm.putParameter("learningRate", 0.04);
 		lstm.putParameter("momentum", 0.8);
 //		lstm.putParameter("lambda", 0.000001);
 		
@@ -92,27 +93,27 @@ public class LSTMTraining {
 		
 		System.out.println("Optimum: " + rmse.evaluate(dataValidation));
 		System.out.println("Base line: " + printBaseline(dataValidation, rmse));
-		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse, (int)readerTraining.getDoubleParameter("timeLag")));
+//		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse, (int)readerTraining.getDoubleParameter("timeLag")));
 		
 		/** visualize. print result. */
 		lstm.setTestSet(dataTraining);
 		lstm.test();
 		lstm.setTestSet(dataValidation);
 		lstm.test();
-		printPredicitons(dataValidation.get(0), "predictions.csv", features);
-		printPredicitons(dataTraining.get(0), "predictionsTraining.csv", features);
+		printPredictions(dataValidation, "predictions.csv", features);
+		printPredictions(dataTraining, "predictionsTraining.csv", features);
 		
-		PricePredictor pp = new PricePredictor(lstm, minmax);
-		
-		Simulator simulator = new Simulator(readerTest , 20, 1);
-		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
-//		CryptsyMarket cryptsy = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
-//		Trader trader = new Trader(pp, cryptsy, resultsFolder + "tradingLog.txt");
-		trader.putParameter("waitMillis", 0);//1000*60*10);
-		trader.startTrading();
-		trader.close();
-		
-		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
+//		PricePredictor pp = new PricePredictor(lstm, minmax);
+//		
+//		Simulator simulator = new Simulator(readerTest , 20, 1);
+//		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
+////		CryptsyMarket cryptsy = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
+////		Trader trader = new Trader(pp, cryptsy, resultsFolder + "tradingLog.txt");
+//		trader.putParameter("waitMillis", 0);//1000*60*10);
+//		trader.startTrading();
+//		trader.close();
+//		
+//		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
 
 	}
 
@@ -138,12 +139,10 @@ public class LSTMTraining {
 			Evaluator<SparseSequence> rmse) {
 		double avgGT = 0;
 		int n = 0;
-		for(SparseSequence s : data){
-			for(int t = 0; t < s.getGroundTruthLength(); t++){
-				if(!Double.isNaN(s.groundTruthAt(t, 0))){
-					avgGT += s.groundTruthAt(t, 0);
-					n++;
-				}
+		for (SparseSequence s : data) {
+			if (!Double.isNaN(s.outcome)) {
+				avgGT += s.outcome;
+				n++;
 			}
 		}
 		avgGT /= n;
@@ -151,11 +150,7 @@ public class LSTMTraining {
 		
 
 		for(SparseSequence s : data){
-			for(int t = 0; t < s.getGroundTruthLength(); t++){
-				if(!Double.isNaN(s.groundTruthAt(t, 0))){
-					s.addSequenceResult(t, 0, avgGT);
-				}
-			}
+			s.putResult("result", avgGT);
 		}
 		
 		return rmse.evaluate(data);
@@ -166,17 +161,18 @@ public class LSTMTraining {
 	 * @param fileName 
 	 * @throws FileNotFoundException
 	 */
-	public static void printPredicitons(SparseSequence s, String fileName, Features features)
+	public static void printPredictions(DataSet<SparseSequence> s, String fileName, Features features)
 			throws FileNotFoundException {
 		PrintWriter pw = new PrintWriter(new File(resultsFolder + fileName));
 		for(int f = 0; f < features.size(); f++)
 			pw.print(features.getFeatureByIndex(f) + ";");
 		pw.println("groundTruth;prediction");
 
-		for(int t = 0; t < s.getSequenceLength(); t++){
+		
+		for(SparseSequence e : s){
 			for(int f = 0; f < features.size(); f++)
-				pw.print(s.get(t, features.getFeatureByIndex(f)) + ";");
-			pw.print(s.groundTruthAt(t, 0) + ";" + s.resultAt(t, 0));
+				pw.print(e.get(e.getSequenceLength() - 1, features.getFeatureByIndex(f)) + ";");
+			pw.print(e.outcome + ";" + e.getResult("result"));
 			pw.println();
 		}
 		pw.close();
