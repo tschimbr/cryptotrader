@@ -9,6 +9,7 @@ import ch.eonum.pipeline.classification.Classifier;
 import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.transformation.MinMaxNormalizerSequence;
+import ch.eonum.pipeline.util.Log;
 
 /**
  * Get market data, apply it to a trained model and predict prices.
@@ -50,10 +51,14 @@ public class PricePredictor {
 	 */
 	public double nextPrediction(Map<String, Double> marketDataNextPoint) {
 		this.normalizer.normSingleTimePoint(marketDataNextPoint);
-		this.marketData.addTimePoint(marketDataNextPoint);
+		this.marketData.addTimePoint(marketDataNextPoint);		
 		List<Double> gt = new ArrayList<Double>();
 		gt.add(0.);
 		this.marketData.addGroundTruth(gt);
+		if(this.marketData.getSequenceLength() > 24)
+			this.marketData.removeSequenceElementAt(0);
+		
+		Log.puts(this.marketData);
 		this.predictor.test();
 		return this.marketData.resultAt(this.marketData.getSequenceLength() - 1, 0);
 	}

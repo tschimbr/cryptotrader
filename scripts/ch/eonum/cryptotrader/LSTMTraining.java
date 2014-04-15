@@ -41,12 +41,7 @@ public class LSTMTraining {
 		CryptsyMarketDataReader readerTraining = new CryptsyMarketDataReader(dataset);
 		CryptsyMarketDataReader readerValidation = new CryptsyMarketDataReader(validationdataset);
 		CryptsyMarketDataReader readerTest = new CryptsyMarketDataReader(testdataset);
-		readerTraining.putParameter("floatingAverageFactor", 0.3);
-		readerValidation.putParameter("floatingAverageFactor", 0.3);
-		readerTest.putParameter("floatingAverageFactor", 0.3);
-		readerTraining.putParameter("smooth", 0.0);
-		readerValidation.putParameter("smooth", 0.0);
-		readerTest.putParameter("smooth", 0.0);
+		
 		
 		DataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
 		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
@@ -109,15 +104,15 @@ public class LSTMTraining {
 		
 		PricePredictor pp = new PricePredictor(lstm, minmax);
 		
-//		Simulator simulator = new Simulator(readerTest , 20, 1);
-//		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
-		CryptsyMarket cryptsy = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
-		Trader trader = new Trader(pp, cryptsy, resultsFolder + "tradingLog.txt");
-		trader.putParameter("waitMillis", 1000*60*10);
+		Simulator simulator = new Simulator(readerTest , 20, 1);
+		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
+//		CryptsyMarket cryptsy = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
+//		Trader trader = new Trader(pp, cryptsy, resultsFolder + "tradingLog.txt");
+		trader.putParameter("waitMillis", 0);//1000*60*10);
 		trader.startTrading();
 		trader.close();
 		
-//		System.out.println("Portfolio Value change: " + cryptsy.evaluate(null));
+		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
 
 	}
 

@@ -200,6 +200,10 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		
 		Map<String, Double> flAvg = floatingAverage.get(currentSequence);
 		Map<String, Double> derivatives = new HashMap<String, Double>();
+		
+		if(this.storePriceData)
+			derivatives.put("marketPrice", point.get("price"));
+		
 		for (String f : flAvg.keySet()) {
 			double value = point.get(f) * (1 - smooth) + smooth * flAvg.get(f);
 			if (derivatedFeatures.contains(f)) {
@@ -215,8 +219,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 			}
 			point.put(f, value);
 		}
-		if(this.storePriceData)
-			derivatives.put("marketPrice", point.get("price"));
+		
 		this.currentSequence.addTimePoint(derivatives);
 		
 //		for(String f : derivatives.keySet())
@@ -252,7 +255,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 		Map<String, Double> point = new HashMap<String, Double>();
 //		point.put("price", Double.parseDouble((String) market.get("lasttradeprice")));
 		point.put("volume", Double.parseDouble((String) market.get("volume")));
-		point.put("daytime", Double.parseDouble(((String) market.get("lasttradetime")).split(" ")[1].substring(0,2)));
+//		point.put("daytime", Double.parseDouble(((String) market.get("lasttradetime")).split(" ")[1].substring(0,2)));
 		
 		List<Object> recentTrades = (List<Object>) market.get("recenttrades");
 		List<Double> prices = new ArrayList<Double>();

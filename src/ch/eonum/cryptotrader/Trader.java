@@ -150,6 +150,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 				
 			}
 			this.log.println();
+			this.log.flush();
 			
 			/** wait if needed. */
 			step++;
