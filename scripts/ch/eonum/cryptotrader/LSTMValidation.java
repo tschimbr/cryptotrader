@@ -23,9 +23,9 @@ import ch.eonum.pipeline.validation.ParameterValidation;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMValidation {
-	public static final String dataset = "data/ALL_MARKETS_Training/";
-	public static final String validationdataset = "data/ALL_MARKETS_Validation/";
-	public static final String resultsFolder = "data/lstm-validation-all/";
+	public static final String dataset = "data/new/LTC_BTC/";
+	public static final String validationdataset = "data/new/LTC_BTC_validation/";
+	public static final String resultsFolder = "data/lstm-validation/";
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough
@@ -59,7 +59,7 @@ public class LSTMValidation {
 		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
 		lstm.addInputTest(minmax);
 		lstm.addInputTraining(minmax);
-		lstm.setForgetGateUse(true);
+		lstm.setForgetGateUse(false);
 		lstm.setInputGateUse(true);
 		lstm.setOutputGateUse(true);
 		lstm.setFeatures(features);
@@ -69,7 +69,7 @@ public class LSTMValidation {
 		
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 1.0);
-		lstm.putParameter("maxEpochsAfterMax", 200);
+		lstm.putParameter("maxEpochsAfterMax", 50);
 		lstm.putParameter("maxEpochs", 500);
 		lstm.putParameter("numLSTM", 4.0);
 		lstm.putParameter("memoryCellBlockSize", 5.0);

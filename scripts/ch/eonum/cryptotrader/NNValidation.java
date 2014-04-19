@@ -6,26 +6,31 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.ParseException;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import com.abwaters.cryptsy.Cryptsy.CryptsyException;
 
-import ch.eonum.pipeline.classification.lstm.LSTM;
+import ch.eonum.pipeline.classification.nn.NeuralNet;
 import ch.eonum.pipeline.core.DataSet;
 import ch.eonum.pipeline.core.Features;
+import ch.eonum.pipeline.core.Parameters;
+import ch.eonum.pipeline.core.SequenceDataSet;
 import ch.eonum.pipeline.core.SparseSequence;
 import ch.eonum.pipeline.evaluation.Evaluator;
 import ch.eonum.pipeline.evaluation.RMSE;
-import ch.eonum.pipeline.evaluation.RMSESequence;
-import ch.eonum.pipeline.transformation.MinMaxNormalizerSequence;
+import ch.eonum.pipeline.transformation.MinMaxNormalizer;
 import ch.eonum.pipeline.util.FileUtil;
+import ch.eonum.pipeline.util.Log;
+import ch.eonum.pipeline.validation.ParameterValidation;
 import ch.eonum.pipeline.validation.SystemValidator;
 
-public class LSTMTraining {
+public class NNValidation {
 	public static final String dataset = "data/archiv/LTC_BTC/";
 	public static final String validationdataset = "data/archiv/LTC_BTC_validation/";
 	public static final String testdataset = "data/archiv/LTC_BTC_test/";
-	public static final String resultsFolder = "data/lstm/";
+	public static final String resultsFolder = "data/nn-validation/";
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough
@@ -41,19 +46,25 @@ public class LSTMTraining {
 		
 		CryptsyMarketDataReader readerTraining = new CryptsyMarketDataReader(dataset);
 		CryptsyMarketDataReader readerValidation = new CryptsyMarketDataReader(validationdataset);
-		CryptsyMarketDataReader readerTest = new CryptsyMarketDataReader(testdataset);
+//		CryptsyMarketDataReader readerTest = new CryptsyMarketDataReader(testdataset);
 		
 		
-		DataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
-		DataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
+		SequenceDataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
+		SequenceDataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
 		
-		@SuppressWarnings("unchecked")
-		Features features = Features.createFromDataSets(new DataSet[] {
-				dataTraining });
+		dataTraining.levelSequencesTimeWindow();
+		dataValidation.levelSequencesTimeWindow();
+		
+		Features features = new Features();
+		for(String f : dataTraining.get(0).features()){
+			for(int i = 0; i < 12; i++)
+				features.addFeature(i + f);
+		}
+		features.recalculateIndex();
 		
 		features.writeToFile(resultsFolder + "features.txt");
 		
-		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, features);
+		MinMaxNormalizer<SparseSequence> minmax = new MinMaxNormalizer<SparseSequence>(dataTraining);
 		minmax.setInputDataSet(dataTraining);
 		minmax.extract();
 		minmax.setInputDataSet(dataValidation);
@@ -62,32 +73,46 @@ public class LSTMTraining {
 				
 		Evaluator<SparseSequence> rmse = new RMSE<SparseSequence>();
 		
-		LSTM<SparseSequence> lstm = new LSTM<SparseSequence>();
-		lstm.setTestSet(dataValidation);
-		lstm.setTrainingSet(dataTraining);
+		NeuralNet<SparseSequence> nn = new NeuralNet<SparseSequence>(features);
+		nn.setTestSet(dataValidation);
+		nn.setTrainingSet(dataTraining);
+	
+		nn.setFeatures(features);
+		nn.setBaseDir(resultsFolder + "nn/");
+		FileUtil.mkdir(resultsFolder + "nn/");
 		
-		lstm.setForgetGateUse(false);
-		lstm.setInputGateUse(true);
-		lstm.setOutputGateUse(true);
-		lstm.setFeatures(features);
-		lstm.setBaseDir(resultsFolder + "lstm/");
-		FileUtil.mkdir(resultsFolder + "lstm/");
+		nn.putParameter("numNets", 3.0);
+		nn.putParameter("numNetsTotal", 1.0);
+		nn.putParameter("maxEpochsAfterMax", 400.0);
+		nn.putParameter("maxEpochs", 2000);
+		nn.putParameter("hidden", 10.0);
+		nn.putParameter("learningRate", 0.04);
+		nn.putParameter("momentum", 0.8);
+		nn.putParameter("batchSize", 20.0);
 		
-//		lstm.putParameter("gaussRange", 0.8);
-//		lstm.putParameter("initRange", 0.12);
-		lstm.putParameter("numNets", 1.0);
-		lstm.putParameter("numNetsTotal", 1.0);
-		lstm.putParameter("maxEpochsAfterMax", 300);
-		lstm.putParameter("maxEpochs", 2000);
-		lstm.putParameter("numLSTM", 6.0);
-		lstm.putParameter("memoryCellBlockSize", 5.0);
-		lstm.putParameter("numHidden", 0.0);
-		lstm.putParameter("learningRate", 0.04);
-		lstm.putParameter("momentum", 0.8);
-//		lstm.putParameter("lambda", 0.000001);
+		SystemValidator<SparseSequence> lstmSystem = new SystemValidator<SparseSequence>(nn, rmse);
+		lstmSystem.setBaseDir(resultsFolder);
 		
-		SystemValidator<SparseSequence> lstmSystem = new SystemValidator<SparseSequence>(lstm, rmse);
-		lstmSystem.setBaseDir(resultsFolder);		
+		List<ParameterValidation> paramsGradientAscent = new ArrayList<ParameterValidation>();
+		
+		
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				nn }, "learningRate", -14, -2, -8,
+				0.0, 0.004, 1.0, true));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				nn }, "momentum", 0.0, 0.9, 0.0,
+				0.99, 0.8, 0.1, false));
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				nn }, "batchSize", 1.0, 10.0, 1.0,
+				20.0, 1.0, 2.0, false));	
+		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
+				nn }, "hidden", 4.0, 12.0, 1.0,
+				20.0, 6.0, 1.0, false));
+		
+
+		Map<ParameterValidation, Double> params = lstmSystem.gradientAscent(paramsGradientAscent, 5, resultsFolder + "parameter_validation/");
+		Log.puts("Optimal Parameters: " + params);
+		ParameterValidation.updateParameters(params);
 		
 		lstmSystem.evaluate(true, "nn-all");
 		
@@ -96,12 +121,12 @@ public class LSTMTraining {
 //		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse, (int)readerTraining.getDoubleParameter("timeLag")));
 		
 		/** visualize. print result. */
-		lstm.setTestSet(dataTraining);
-		lstm.test();
-		lstm.setTestSet(dataValidation);
-		lstm.test();
-		printPredictions(dataValidation, "predictions.csv", features, false);
-		printPredictions(dataTraining, "predictionsTraining.csv", features, false);
+		nn.setTestSet(dataTraining);
+		nn.test();
+		nn.setTestSet(dataValidation);
+		nn.test();
+		printPredictions(dataValidation, "predictions.csv", features, true);
+		printPredictions(dataTraining, "predictionsTraining.csv", features, true);
 		
 //		PricePredictor pp = new PricePredictor(lstm, minmax);
 //		
@@ -155,12 +180,7 @@ public class LSTMTraining {
 		
 		return rmse.evaluate(data);
 	}
-
-	/**
-	 * @param s
-	 * @param fileName 
-	 * @throws FileNotFoundException
-	 */
+	
 	public static void printPredictions(DataSet<SparseSequence> s, String fileName, Features features, boolean flat)
 			throws FileNotFoundException {
 		PrintWriter pw = new PrintWriter(new File(resultsFolder + fileName));

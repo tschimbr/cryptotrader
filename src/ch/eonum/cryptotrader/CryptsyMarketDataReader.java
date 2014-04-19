@@ -171,7 +171,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 			if(e.id.contains("BTC") && e.get("volume") > 10)
 				data.add(e);
 		}
-		data = splitSequences(18, data);
+		data = splitSequences(12, data);
 		return data;
 	}
 	
