@@ -25,7 +25,7 @@ public class LSTMTraining {
 	public static final String dataset = "data/LTC_BTC/";
 	public static final String validationdataset = "data/archiv/LTC_BTC_validation/";
 	public static final String testdataset = "data/archiv/LTC_BTC_test/";
-	public static final String resultsFolder = "data/lstm/";
+	public static final String resultsFolder = "data/lstm-cryptsy-production/";
 
 	/**
 	 * Test Validation Script for the evaluation of models. Execute with enough
@@ -74,10 +74,10 @@ public class LSTMTraining {
 		
 //		lstm.putParameter("gaussRange", 0.8);
 //		lstm.putParameter("initRange", 0.12);
-		lstm.putParameter("numNets", 1.0);
+		lstm.putParameter("numNets", 2.0);
 		lstm.putParameter("numNetsTotal", 4.0);
 		lstm.putParameter("maxEpochsAfterMax", 4000);
-		lstm.putParameter("maxEpochs", 4000);
+		lstm.putParameter("maxEpochs", 10000);
 		lstm.putParameter("numLSTM", 8.0);
 		lstm.putParameter("memoryCellBlockSize", 5.0);
 		lstm.putParameter("numHidden", 0.0);
@@ -105,17 +105,17 @@ public class LSTMTraining {
 		
 		PricePredictor pp = new PricePredictor(lstm, minmax);
 		
-		Simulator simulator = new Simulator(readerTest, 20, 1);
-		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
-		trader.putParameter("waitMillis", 0);
-//		CryptsyMarket cryptsy = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
-//		Trader trader = new Trader(pp, cryptsy, resultsFolder + "tradingLog.txt");
-//		trader.putParameter("waitMillis", 1000*60*10);
+//		Simulator simulator = new Simulator(readerTest, 20, 1);
+//		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
+//		trader.putParameter("waitMillis", 0);
+		CryptsyMarket cryptsy = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
+		Trader trader = new Trader(pp, cryptsy, resultsFolder + "tradingLog.txt");
+		trader.putParameter("waitMillis", 1000*60*10);
 		
 		trader.startTrading();
 		trader.close();
 		
-		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
+//		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
 
 	}
 
