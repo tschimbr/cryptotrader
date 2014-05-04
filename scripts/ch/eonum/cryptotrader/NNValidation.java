@@ -81,12 +81,12 @@ public class NNValidation {
 		nn.setBaseDir(resultsFolder + "nn/");
 		FileUtil.mkdir(resultsFolder + "nn/");
 		
-		nn.putParameter("numNets", 3.0);
-		nn.putParameter("numNetsTotal", 1.0);
+		nn.putParameter("numNets", 2.0);
+		nn.putParameter("numNetsTotal", 3.0);
 		nn.putParameter("maxEpochsAfterMax", 400.0);
 		nn.putParameter("maxEpochs", 2000);
 		nn.putParameter("hidden", 10.0);
-		nn.putParameter("learningRate", 0.04);
+		nn.putParameter("learningRate", 0.008);
 		nn.putParameter("momentum", 0.8);
 		nn.putParameter("batchSize", 20.0);
 		
@@ -101,13 +101,13 @@ public class NNValidation {
 				0.0, 0.004, 1.0, true));
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				nn }, "momentum", 0.0, 0.9, 0.0,
-				0.99, 0.8, 0.1, false));
+				0.99, 0.8, 0.05, false));
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				nn }, "batchSize", 1.0, 10.0, 1.0,
-				20.0, 1.0, 2.0, false));	
+				nn }, "batchSize", 1.0, 100.0, 1.0,
+				200.0, 1.0, 10.0, false));	
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				nn }, "hidden", 4.0, 12.0, 1.0,
-				20.0, 6.0, 1.0, false));
+				nn }, "hidden", 1.0, 20.0, 1.0,
+				40.0, 6.0, 1.0, false));
 		
 
 		Map<ParameterValidation, Double> params = lstmSystem.gradientAscent(paramsGradientAscent, 5, resultsFolder + "parameter_validation/");

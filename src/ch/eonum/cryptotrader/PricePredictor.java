@@ -55,7 +55,7 @@ public class PricePredictor {
 		List<Double> gt = new ArrayList<Double>();
 		gt.add(0.);
 		this.marketData.addGroundTruth(gt);
-		if(this.marketData.getSequenceLength() > 24)
+		if(this.marketData.getSequenceLength() > CryptsyMarketDataReader.SEQUENCE_LENGTH)
 			this.marketData.removeSequenceElementAt(0);
 		
 		Log.puts(this.marketData);

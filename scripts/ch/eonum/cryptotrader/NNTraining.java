@@ -21,9 +21,9 @@ import ch.eonum.pipeline.util.FileUtil;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class NNTraining {
-	public static final String dataset = "data/archiv/LTC_BTC/";
-	public static final String validationdataset = "data/archiv/LTC_BTC_validation/";
-	public static final String testdataset = "data/archiv/LTC_BTC_test/";
+	public static final String dataset = "data/new/LTC_BTC/";
+	public static final String validationdataset = "data/new/LTC_BTC_validation/";
+	public static final String testdataset = "data/new/LTC_BTC_test/";
 	public static final String resultsFolder = "data/nn/";
 
 	/**
@@ -75,12 +75,12 @@ public class NNTraining {
 		nn.setBaseDir(resultsFolder + "nn/");
 		FileUtil.mkdir(resultsFolder + "nn/");
 		
-		nn.putParameter("numNets", 1.0);
-		nn.putParameter("numNetsTotal", 1.0);
+		nn.putParameter("numNets", 5.0);
+		nn.putParameter("numNetsTotal", 5.0);
 		nn.putParameter("maxEpochsAfterMax", 300.0);
 		nn.putParameter("maxEpochs", 2000);
-		nn.putParameter("hidden", 10.0);
-		nn.putParameter("learningRate", 0.04);
+		nn.putParameter("hidden", 18.0);
+		nn.putParameter("learningRate", 0.03125);
 		nn.putParameter("momentum", 0.8);
 		nn.putParameter("batchSize", 20.0);
 		
@@ -90,7 +90,7 @@ public class NNTraining {
 		lstmSystem.evaluate(true, "nn-all");
 		
 		System.out.println("Optimum: " + rmse.evaluate(dataValidation));
-		System.out.println("Base line: " + printBaseline(dataValidation, rmse));
+		System.out.println("Base line: " + printBaseline(dataTraining, dataValidation, rmse));
 //		System.out.println("Base line with same trend: " + printTimeLagBaseline(dataValidation, rmse, (int)readerTraining.getDoubleParameter("timeLag")));
 		
 		/** visualize. print result. */
@@ -133,11 +133,11 @@ public class NNTraining {
 	}
 
 	public static double printBaseline(
-			DataSet<SparseSequence> data,
-			Evaluator<SparseSequence> rmse) {
+			DataSet<SparseSequence> dataTrain,
+			SequenceDataSet<SparseSequence> data, Evaluator<SparseSequence> rmse) {
 		double avgGT = 0;
 		int n = 0;
-		for (SparseSequence s : data) {
+		for (SparseSequence s : dataTrain) {
 			if (!Double.isNaN(s.outcome)) {
 				avgGT += s.outcome;
 				n++;

@@ -22,7 +22,7 @@ import ch.eonum.pipeline.util.FileUtil;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMTraining {
-	public static final String dataset = "data/archiv/LTC_BTC/";
+	public static final String dataset = "data/LTC_BTC/";
 	public static final String validationdataset = "data/archiv/LTC_BTC_validation/";
 	public static final String testdataset = "data/archiv/LTC_BTC_test/";
 	public static final String resultsFolder = "data/lstm/";
@@ -40,11 +40,10 @@ public class LSTMTraining {
 		FileUtil.mkdir(resultsFolder);
 		
 		CryptsyMarketDataReader readerTraining = new CryptsyMarketDataReader(dataset);
-		CryptsyMarketDataReader readerValidation = new CryptsyMarketDataReader(validationdataset);
-		CryptsyMarketDataReader readerTest = new CryptsyMarketDataReader(testdataset);
+		CryptsyMarketDataReader readerTest = new CryptsyMarketDataReader(validationdataset);
 		
 		
-		DataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
+//		DataSet<SparseSequence> dataValidation = readerValidation.readDataSet(validationdataset);
 		DataSet<SparseSequence> dataTraining = readerTraining.readDataSet(dataset);
 		
 		@SuppressWarnings("unchecked")
@@ -56,8 +55,8 @@ public class LSTMTraining {
 		MinMaxNormalizerSequence<SparseSequence> minmax = new MinMaxNormalizerSequence<SparseSequence>(dataTraining, features);
 		minmax.setInputDataSet(dataTraining);
 		minmax.extract();
-		minmax.setInputDataSet(dataValidation);
-		minmax.extract();
+		
+		DataSet<SparseSequence> dataValidation = dataTraining.extractSubSet(0.2);
 		
 				
 		Evaluator<SparseSequence> rmse = new RMSE<SparseSequence>();
@@ -76,14 +75,15 @@ public class LSTMTraining {
 //		lstm.putParameter("gaussRange", 0.8);
 //		lstm.putParameter("initRange", 0.12);
 		lstm.putParameter("numNets", 1.0);
-		lstm.putParameter("numNetsTotal", 1.0);
-		lstm.putParameter("maxEpochsAfterMax", 300);
-		lstm.putParameter("maxEpochs", 2000);
-		lstm.putParameter("numLSTM", 6.0);
+		lstm.putParameter("numNetsTotal", 4.0);
+		lstm.putParameter("maxEpochsAfterMax", 4000);
+		lstm.putParameter("maxEpochs", 10);
+		lstm.putParameter("numLSTM", 8.0);
 		lstm.putParameter("memoryCellBlockSize", 5.0);
 		lstm.putParameter("numHidden", 0.0);
-		lstm.putParameter("learningRate", 0.04);
-		lstm.putParameter("momentum", 0.8);
+		lstm.putParameter("learningRate", 0.0078125);
+		lstm.putParameter("momentum", 0.9);
+		lstm.putParameter("batchSize", 60.0);
 //		lstm.putParameter("lambda", 0.000001);
 		
 		SystemValidator<SparseSequence> lstmSystem = new SystemValidator<SparseSequence>(lstm, rmse);
@@ -103,16 +103,18 @@ public class LSTMTraining {
 		printPredictions(dataValidation, "predictions.csv", features, false);
 		printPredictions(dataTraining, "predictionsTraining.csv", features, false);
 		
-//		PricePredictor pp = new PricePredictor(lstm, minmax);
-//		
-//		Simulator simulator = new Simulator(readerTest , 20, 1);
-//		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
-////		CryptsyMarket cryptsy = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
-////		Trader trader = new Trader(pp, cryptsy, resultsFolder + "tradingLog.txt");
-//		trader.putParameter("waitMillis", 0);//1000*60*10);
-//		trader.startTrading();
-//		trader.close();
-//		
+		PricePredictor pp = new PricePredictor(lstm, minmax);
+		
+		Simulator simulator = new Simulator(readerTest, 20, 1);
+		Trader trader = new Trader(pp, simulator, resultsFolder + "tradingLog.txt");
+		trader.putParameter("waitMillis", 0);
+//		CryptsyMarket cryptsy = new CryptsyMarket(3, new CryptsyMarketDataReader(null), "/home/tim/cryptotrader/data/private-api/");
+//		Trader trader = new Trader(pp, cryptsy, resultsFolder + "tradingLog.txt");
+//		trader.putParameter("waitMillis", 1000*60*10);
+		
+		trader.startTrading();
+		trader.close();
+		
 //		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
 
 	}

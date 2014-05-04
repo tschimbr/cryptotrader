@@ -57,7 +57,7 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		this.log = new PrintWriter(new File(logFileName));
 		this.previousPredictions = new ArrayList<Double>();
 		dateFormatter = new SimpleDateFormat("yyyy-MM-dd kk:mm");
-		this.putParameter("startAfter", 6);
+		this.putParameter("startAfter", 12);
 		this.putParameter("numConsecutive", 1.0);
 		this.putParameter("upperThreshold", 0.56);
 		this.putParameter("lowerThreshold", 0.44);

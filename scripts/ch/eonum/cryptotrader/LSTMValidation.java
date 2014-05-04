@@ -23,8 +23,8 @@ import ch.eonum.pipeline.validation.ParameterValidation;
 import ch.eonum.pipeline.validation.SystemValidator;
 
 public class LSTMValidation {
-	public static final String dataset = "data/new/LTC_BTC/";
-	public static final String validationdataset = "data/new/LTC_BTC_validation/";
+	public static final String dataset = "data/LTC_BTC/";
+	public static final String validationdataset = "data/LTC_BTC_validation/";
 	public static final String resultsFolder = "data/lstm-validation/";
 
 	/**
@@ -68,14 +68,15 @@ public class LSTMValidation {
 	
 		
 		lstm.putParameter("numNets", 1.0);
-		lstm.putParameter("numNetsTotal", 1.0);
-		lstm.putParameter("maxEpochsAfterMax", 50);
-		lstm.putParameter("maxEpochs", 500);
-		lstm.putParameter("numLSTM", 4.0);
+		lstm.putParameter("numNetsTotal", 3.0);
+		lstm.putParameter("maxEpochsAfterMax", 300);
+		lstm.putParameter("maxEpochs", 2000);
+		lstm.putParameter("numLSTM", 6.0);
 		lstm.putParameter("memoryCellBlockSize", 5.0);
 		lstm.putParameter("numHidden", 0.0);
 		lstm.putParameter("learningRate", 0.004);
 		lstm.putParameter("momentum", 0.8);
+		lstm.putParameter("batchSize", 20.0);
 		
 		SystemValidator<SparseSequence> lstmSystem = new SystemValidator<SparseSequence>(lstm, rmse);
 		lstmSystem.setBaseDir(resultsFolder);
@@ -94,8 +95,8 @@ public class LSTMValidation {
 				lstm }, "momentum", 0.0, 0.9, 0.0,
 				0.99, 0.8, 0.1, false));
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
-				lstm }, "batchSize", 1.0, 10.0, 1.0,
-				20.0, 1.0, 2.0, false));	
+				lstm }, "batchSize", 1.0, 100.0, 1.0,
+				200.0, 1.0, 10.0, false));	
 		paramsGradientAscent.add(new ParameterValidation(new Parameters[] {
 				lstm }, "memoryCellBlockSize", 1.0, 8.0, 1.0,
 				20.0, 5.0, 1.0, false));

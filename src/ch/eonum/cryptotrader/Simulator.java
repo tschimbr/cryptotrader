@@ -19,7 +19,7 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	/** market place fees in %. */
 	public static final double MARKET_FEE = 0.002;
 	/** simulation data. */
-	private SparseSequence marketData;
+	private SequenceDataSet<SparseSequence> marketData;
 	/** current time in the sequence. */
 	private int currentIndex;
 	/** name of the traded currency. */
@@ -35,23 +35,24 @@ public class Simulator implements Evaluator<SparseSequence>, Market  {
 	public Simulator(CryptsyMarketDataReader dataReader, double initialBalanceX, double initialBalanceBTC) {
 		dataReader.doStorePriceData();
 		SequenceDataSet<SparseSequence> data = dataReader.testSystem();
-		this.marketData = data.get(0);
+		this.marketData = data;
 		this.currentIndex = 0;
 		this.btcBalance = initialBalanceBTC;
-		this.currencyName = marketData.id.replace("/BTC", "");
+		this.currencyName = marketData.get(0).id.replace("/BTC", "");
 		this.xBalance = initialBalanceX;
-		this.price = marketData.getTimePoint(0).get("marketPrice");
+		this.price = marketData.get(0).getTimePoint(0).get("marketPrice");
 		this.initialPortfolioValue = this.getPortfolioValue();
 	}
 	
 	@Override
 	public boolean hasNext() {
-		return this.currentIndex < marketData.getSequenceLength();
+		return this.currentIndex < marketData.size();
 	} 
 	
 	@Override
 	public Map<String, Double> next() {
-		Map<String, Double> map = marketData.getTimePoint(currentIndex++);	
+		SparseSequence seq = marketData.get(currentIndex++);
+		Map<String, Double> map = seq.getTimePoint(seq.getSequenceLength() - 1);	
 		price = map.get("marketPrice");
 		return new HashMap<String, Double>(map);
 	}

@@ -32,6 +32,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 	private static List<String> derivatedFeatures = new ArrayList<String>();
 	private static Map<String, Object> markets;
 	private static final Map<String, String> PARAMETERS = new HashMap<String, String>();
+	public static final int SEQUENCE_LENGTH = 12;
 	
 	static {
 		PARAMETERS.put("floatingAverageFactor", "factor by which the floating average is being adapted 0 < x < 1 (default 0.3)");
@@ -171,7 +172,7 @@ public class CryptsyMarketDataReader extends Parameters implements DataPipeline<
 			if(e.id.contains("BTC") && e.get("volume") > 10)
 				data.add(e);
 		}
-		data = splitSequences(12, data);
+		data = splitSequences(SEQUENCE_LENGTH, data);
 		return data;
 	}
 	
