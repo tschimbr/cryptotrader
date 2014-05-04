@@ -59,8 +59,8 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		dateFormatter = new SimpleDateFormat("yyyy-MM-dd kk:mm");
 		this.putParameter("startAfter", 12);
 		this.putParameter("numConsecutive", 1.0);
-		this.putParameter("upperThreshold", 0.56);
-		this.putParameter("lowerThreshold", 0.44);
+		this.putParameter("upperThreshold", 1.0);//0.56);
+		this.putParameter("lowerThreshold", -1.0);//0.44);
 		this.putParameter("minimumTrade", 0.01);
 		this.putParameter("waitMillis", 0);
 	}
@@ -83,11 +83,13 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 		double price = this.market.getPrice();
 		String currency = market.getCurrencyName();
 		
-		this.log.println("date;prediction;upperThreshold;lowerThreshold;BTCBalance;" + currency + "Balance;"
+		this.log.println("date;prediction;normalizedPrediction;upperThreshold;lowerThreshold;BTCBalance;" + currency + "Balance;"
 				+ currency + "Price;portfolioValue;");		
 		
 		double upperThreshold = getDoubleParameter("upperThreshold");
 		double lowerThreshold = getDoubleParameter("lowerThreshold");
+		int startAfter = this.getIntParameter("startAfter");
+		
 		long waitMillis = getIntParameter("waitMillis");
 		long start = System.currentTimeMillis();
 		long step = 0;
@@ -96,7 +98,21 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 			Map<String, Double> marketData = market.next();
 			double prediction = predictor.nextPrediction(marketData);
 			this.previousPredictions.add(prediction);
-			log.print(dateFormatter.format(new Date()) + ";" + prediction + ";");
+			
+			/** normalize prediction. */
+			double avg = 0.0;
+			int n = this.previousPredictions.size() - startAfter;
+			for(int i = startAfter; i < n + startAfter; i++)
+				avg += previousPredictions.get(i);
+			avg /= n;
+			double std = 0.0;
+			for(int i = startAfter; i < n + startAfter; i++)
+				std += Math.pow(avg - previousPredictions.get(i), 2);
+			std = Math.sqrt(std/(n - 1));
+			
+			double normalizedPrediction = (prediction - avg) / std;
+			
+			log.print(dateFormatter.format(new Date()) + ";" + prediction + ";" + normalizedPrediction + ";");
 			log.print(upperThreshold + ";" + lowerThreshold + ";");
 			int time = this.previousPredictions.size();
 			
@@ -110,14 +126,14 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 			
 			double minimum = this.getDoubleParameter("minimumTrade") * portFolioValue;
 			
-			if(time > this.getIntParameter("startAfter")){
+			if(time > startAfter){
 				/** start trading. */
 				/** buy. */
-				if(prediction > upperThreshold
+				if(normalizedPrediction > upperThreshold
 						&& btcBalance > 0){
 					boolean isStable = true;
-					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
-						isStable = isStable && previousPredictions.get(i) > getDoubleParameter("upperThreshold");
+//					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
+//						isStable = isStable && previousPredictions.get(i) > getDoubleParameter("upperThreshold");
 					if(isStable){
 						double amount = (btcBalance * 0.8) / price;
 						if(amount * price > minimum){
@@ -129,11 +145,11 @@ public class Trader extends Parameters implements DataPipeline<SparseSequence> {
 					}
 				}
 				/** sell. */
-				else if(prediction < lowerThreshold
+				else if(normalizedPrediction < lowerThreshold
 						&& xBalance > 0){
 					boolean isStable = true;
-					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
-						isStable = isStable && previousPredictions.get(i) < getDoubleParameter("lowerThreshold");
+//					for(int i = time - 1; i >= time - this.getDoubleParameter("numConsecutive"); i--)
+//						isStable = isStable && previousPredictions.get(i) < getDoubleParameter("lowerThreshold");
 					if(isStable){
 						double amount = xBalance * 0.8;
 						if(amount * price > minimum){

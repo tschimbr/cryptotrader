@@ -77,7 +77,7 @@ public class LSTMTraining {
 		lstm.putParameter("numNets", 1.0);
 		lstm.putParameter("numNetsTotal", 4.0);
 		lstm.putParameter("maxEpochsAfterMax", 4000);
-		lstm.putParameter("maxEpochs", 10);
+		lstm.putParameter("maxEpochs", 4000);
 		lstm.putParameter("numLSTM", 8.0);
 		lstm.putParameter("memoryCellBlockSize", 5.0);
 		lstm.putParameter("numHidden", 0.0);
@@ -115,7 +115,7 @@ public class LSTMTraining {
 		trader.startTrading();
 		trader.close();
 		
-//		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
+		System.out.println("Portfolio Value change: " + simulator.evaluate(null));
 
 	}
 
