@@ -103,6 +103,8 @@ public class LSTMTraining {
 		printPredictions(dataValidation, "predictions.csv", features, false);
 		printPredictions(dataTraining, "predictionsTraining.csv", features, false);
 		
+		lstm.save(resultsFolder + "lstm/finalNet");
+		
 		PricePredictor pp = new PricePredictor(lstm, minmax);
 		
 //		Simulator simulator = new Simulator(readerTest, 20, 1);
